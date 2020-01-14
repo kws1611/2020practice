@@ -26,62 +26,129 @@ def nomalizeQuaternion(q0, q1, q2, q3):
     q3 = q3 / norm
     return q0, q1, q2, q3
 
-def rotateQuaternion(x, y, z, q0, q1, q2, q3):
+def rotateVectorByQuaternion(x, y, z, q0, q1, q2, q3):
     vx = (q0*q0 + q1*q1 - q2*q2 - q3*q3)*x + 2*(q1*q2 - q0*q3)*y + 2*(q1*q3 + q0*q2)*z
     vy = 2*(q1*q2 + q0*q3)*x + (q0*q0 - q1*q1 + q2*q2 - q3*q3)*y + 2*(q2*q3 - q0*q1)*z
     vz = 2*(q1*q3 - q0*q2)*x + 2*(q2*q3 + q0*q1)*y + (q0*q0 - q1*q1 - q2*q2 + q3*q3)*z
     return vx, vy, vz
 
-Gravity = 9.81
-AngularVelocityThreshold = rospy.get_param("/complementary/AngularVelocityThreshold")
-AccelerationThreshold = rospy.get_param("/complementary/AccelerationThreshold")
-DeltaAngularVelocityThreshold = rospy.get_param("/complementary/DeltaAngularVelocityThreshold")
-
-class complementary(self, msg):
+class complement_Filter:
 	def __init__(self):
-		rospy.subscriber("/imu_raw", Imu, self.imu_raw_cb)
-		rospy.subscriber("/mag_raw", MagneticField, self.mag_raw_cb)
+		self.IsBias = False
+		self.numBias = 0
+		# number of data for measuring bias of gyroscope
+		self.goalBias = 100 
+		self.g_xSum = 0
+		self.g_ySum = 0
+		self.g_zSum = 0
+		self.g_xBias = 0
+		self.g_yBias = 0
+		self.g_zBias = 0
+		self.q0 = 1
+		self.q1 = 0
+		self.q2 = 0
+		self.q3 = 0
+		self.Alpha=0.5
+		self.Beta=0.5
+		while self.IsBias == False:
+			rospy.Subscriber("/imu_raw",Imu,self.imu_raw_data)
+			self.getBias()
+			
+	def imu_raw_data(self,msg):
+		self.a_x=msg.linear_acceleration.x
+		self.a_y=msg.linear_acceleration.y
+		self.a_z=msg.linear_acceleration.z
+		self.g_x=msg.angular_velocity.x
+		self.g_y=msg.angular_velocity.y
+		self.g_z=msg.angular_velocity.z
 
-	def imu_raw_data(self, msg):
-		self.imu_raw = msg
+	def mag_raw_data(self,msg):
+		self.m_x=msg.magnetic_field.x
+		self.m_y=msg.magnetic_field.y
+		self.m_z=msg.magnetic_field.z
 
-		self.acc_x = self.imu_raw.linear_acceleration.x
-		self.acc_y = self.imu_raw.linear_acceleration.y
-		self.acc_z = self.imu_raw.linear_acceleration.z
+	def getBias(self):
+		self.g_xSum = self.g_xSum + self.g_x
+		self.g_ySum = self.g_ySum + self.g_y
+		self.g_zSum = self.g_zSum + self.g_z
+		if self.numBias == self.goalBias
+			self.IsBias = True
+			self.g_xBias = self.g_xSum/self.goalBias
+			self.g_yBias = self.g_ySum/self.goalBias
+			self.g_zBias = self.g_zSum/self.goalBias
 
-		self.gyro_x = self.imu_raw.angular_velocity.x
-		self.gyro_y = self.imu_raw.angular_velocity.y
-		self.gyro_z = self.imu_raw.angular_velocity.z
-
-	def mag_raw_data(self, msg):
-		self.mag_raw = msg
-		
-		self.mag_x = self.magnetic_field.x
-		self.mag_y = self.magnetic_field.y
-		self.mag_z = self.magnetic_field.z
-
-	def Prediction(self, wx, wy, wz):
-		wx = wx - wx_bias
-		wy = wy - wy_bias
-		wz = wz - wz_bias
-		q0_pre,q1_pre,q2_pre,q3_pre = -0.5 * multipleQuaternion(0,wx,wy,yz,q0,q1,q2,q3) * dt
-		np.matrix('q0_pre q1_pre q2_pre q3_pre')=np.matrix('q0_pre q1_pre q2_pre q3_pre')+np.matrix('q0 q1 q2 q3')
-	def correctionAcc():
-		alpha = gainFunction(0, ax, ay, az) * Alpha
-		normalizeQuaternion(0, ax, ay, az)
-		g_x=rotateQuaternion(ax, ay, az, q0_pre, q1_pre, q2_pre, q3_pre)
-		
-
-
-if __name__ == "__main__":
-    rospy.init_node("Complementary_Filter", anonymous=True)
-    rospy.loginfo("Complementary filter node initialized")
-
-
-    try:
-
-    except rospy.ROSInterruptException:
-        print "ROS terminated"
-        pass
+	def getAccelGyro(self):
+		rospy.Subscriber("/imu_raw",Imu,self.imu_raw_data)
+		self.g_x=self.g_x-self.g_xBias
+		self.g_y=self.g_y-self.g_yBias
+		self.g_z=self.g_z-self.g_zBias
 	
+	def getMagnetic(self):
+		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
+		#need to do magneto correction
 
+	def getPrediction(self):
+		self.getAccelGyro()
+		q0_gyro,q1_gyro,q2_gyro,q3_gyro = quaternionMultiplication(0, self.g_x, self.g_y, self.g_z, self.q0, self.q1, self.q2, self.q3)
+		q0_gyro = self.q0 - 0.5 * q0_gyro * self.dt
+		q1_gyro = self.q1 - 0.5 * q1_gyro * self.dt
+		q2_gyro = self.q2 - 0.5 * q2_gyro * self.dt
+		q3_gyro = self.q3 - 0.5 * q3_gyro * self.dt
+		return q0_gyro, q1_gyro, q2_gyro, q3_gyro
+		
+	def gainFunction(self, ax, ay, az):
+		norm = sqrt(ax ** 2 + ay ** 2 + az ** 2)
+		error = abs(norm - 1)
+		if error < 0.1: 
+			return 1
+		elif error < 0.2:
+			return 1 - 5 * error
+		else:
+			return 0
+	
+	def Acc_Correction(self):
+		alpha = self.gainAcc(self.a_x, self.a_y, self.a_z) * self.Alpha
+		gx, gy, gz = rotateVectorQuaternion(self.a_x, self.a_y, self.a_z, self.q0, -self.q1, -self.q2, -self.q3)
+		q0_acc = alpha * sqrt(0.5 * (gx + 1)) + (1-alpha)
+		q1_acc = alpha * (-gy / sqrt(2 * (gz + 1)))
+		q2_acc= q2 = alpha * (gx / sqrt(2 * (gz + 1)))
+		q3_acc = 0
+		q0_acc, q1_acc, q2_acc, q3_acc = normalizeQuaternion(q0_acc, q1_acc, q2_acc, q3_acc)
+		return q0_acc, q1_acc, q2_acc, q3_acc
+
+	def Mag_Correction(self):
+		self.getMagnetic()
+		beta = self.gainMag(self.m_x, self.m_y, self.m_z) * self.Beta
+		lx, ly, lz = rotate(self.m_x, self.m_y, self.m_z, self.q0, self.q1, self.q2, self.q3)
+		gamma = lx ** 2 + ly **2
+		q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
+		q1_mag = 0
+		q2_mag = 0
+		q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
+		q0_mag, q1_mag, q2_mag, q3_mag= normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
+		return q0_mag, q1_mag, q2_mag, q3_mag
+		
+	def Imu_Mag_Complementary(self):
+		q0_gyro, q1_gyro, q2_gyro, q3_gyro = self.getPrediction()
+		q0_acc, q1_acc, q2_acc, q3_acc = self.Acc_Correction()
+		self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(q0_gyro, q1_gyro, q2_gyro, q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
+		q0_mag, q1_mag, q2_mag, q3_mag = self.Mag_Correction()
+		self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, q0_mag, q1_mag, q2_mag, q3_mag)
+
+if __name__=="__main__":
+	rospy.init_node("Complementary", anonymous = True)
+	rospy.loginfo("starting Complementary Filter")
+	complementary = complement_Filter()
+	
+	try:
+		rospy.loginfo("complementary filter start!")
+		complement_Filter.Imu_Mag_Complementary()
+	except rospy.ROSInterruptException:
+		print "ROS terminated"
+		pass
+		
+
+		
+		
+
+	
