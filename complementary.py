@@ -150,12 +150,13 @@ class complement_Filter:
 		return q0_mag, q1_mag, q2_mag, q3_mag
 		
 	def Imu_Mag_Complementary(self):
-		q0_gyro, q1_gyro, q2_gyro, q3_gyro = self.getPrediction()
-		q0_acc, q1_acc, q2_acc, q3_acc = self.Acc_Correction()
-		self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(q0_gyro, q1_gyro, q2_gyro, q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
-		q0_mag, q1_mag, q2_mag, q3_mag = self.Mag_Correction()
-		self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, q0_mag, q1_mag, q2_mag, q3_mag)
-		print(str(self.q0) + str(self.q1) + str(self.q2) + str(self.q3))
+		while not rospy.is_shutdown():
+			q0_gyro, q1_gyro, q2_gyro, q3_gyro = self.getPrediction()
+			q0_acc, q1_acc, q2_acc, q3_acc = self.Acc_Correction()
+			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(q0_gyro, q1_gyro, q2_gyro, q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
+			q0_mag, q1_mag, q2_mag, q3_mag = self.Mag_Correction()
+			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, q0_mag, q1_mag, q2_mag, q3_mag)
+			print(str(self.q0) + str(self.q1) + str(self.q2) + str(self.q3))
 
 if __name__=="__main__":
 	rospy.init_node("Complementary", anonymous = True)
@@ -164,6 +165,7 @@ if __name__=="__main__":
 	try:
 		rospy.loginfo("complementary filter start!")
 		complement.Imu_Mag_Complementary()
+		rospy.sleep(0.5)
 	except rospy.ROSInterruptException:
 		print "ROS terminated"
 		pass
