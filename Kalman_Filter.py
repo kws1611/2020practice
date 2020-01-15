@@ -11,7 +11,7 @@ import math
 import numpy.linalg as lin
 import tf
 
-global X, P, dt, H, Q, R
+
 
 
 
@@ -30,6 +30,7 @@ def norm_quat(a_1, a_2, a_3, a_4):
 	q_2 = a_3/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2) 
 	q_3 = a_4/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
 	q = np.matrix([q_0, q_1, q_2, q_3])
+	q = q.T
 	return q
 
 
@@ -110,7 +111,7 @@ class kalman_Filter:
 		self.X = self.Xp + self.K*(self.Z - self.H*self.Xp)
 		self.X = norm_quat(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0])
 		self.P = self.Pp - self.K*self.H*self.Pp
-		print(self.X.T)
+		print(self.X)
 		
 		
 if __name__ == "__main__":
@@ -127,6 +128,7 @@ if __name__ == "__main__":
 
 			 
 			Filtering.kalman()
+			rospy.sleep(0.5)
 	except rospy.ROSInterruptException: 
 		print "ROS terminated"
 		pass
