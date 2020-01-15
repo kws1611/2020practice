@@ -63,7 +63,10 @@ class complement_Filter:
 		self.t_prev = time.time()
 		while self.IsBias == False:
 			rospy.Subscriber("/imu_raw", Imu,self.imu_raw_data)
-			self.getBias()
+			self.getGyroCali()
+			rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
+			
+			rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
 
 	def calcDT(self):
 		t_now = time.time()
@@ -83,7 +86,7 @@ class complement_Filter:
 		self.m_y=msg.magnetic_field.y
 		self.m_z=msg.magnetic_field.z
 
-	def getBias(self):
+	def getGyroCali(self):
 		self.g_xSum = self.g_xSum + self.g_x
 		self.g_ySum = self.g_ySum + self.g_y
 		self.g_zSum = self.g_zSum + self.g_z
@@ -93,6 +96,9 @@ class complement_Filter:
 			self.g_yBias = self.g_ySum/self.goalBias
 			self.g_zBias = self.g_zSum/self.goalBias
 
+	def getMagCali(self):
+
+
 	def getAccelGyro(self):
 		rospy.Subscriber("/imu_raw",Imu,self.imu_raw_data)
 		self.g_x = self.g_x - self.g_xBias
@@ -101,7 +107,8 @@ class complement_Filter:
 	
 	def getMagnetic(self):
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
-		#need to do magneto calibration
+		
+		
 
 	def getPrediction(self):
 		self.calcDT()
