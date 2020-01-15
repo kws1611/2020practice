@@ -35,21 +35,19 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 
 class complement_Filter:
 	def __init__(self):
-		rospy.Subscriber("/imu_raw", Imu,self.imu_raw_data)
+		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0, 0, 0
 		self.m_xBias, self.m_yBias, self.m_zBias = 0, 0, 0
 		self.m_xScale, self.m_yScale, self.m_zScale = 0, 0 ,0
-		self.Alpha = 0.5
-		self.Beta = 0.5
+		self.Alpha, self.Beta = 0.5, 0.5
 		self.q0, self.q1, self.q2, self.q3 = 1, 0, 0, 0
 		self.a_x, self.a_y, self.a_z = 0, 0, 1
 		self.g_x, self.g_y, self.g_z = 0, 0, 0
-		self.m_x = 0
-		self.m_y = 0
-		self.m_z = 0
+		self.m_x, self.m_y, self.m_z = 0, 0, 0
 		self.t_prev = time.time()
-		self.Calibration()
+		self.frequency = 0.5
+		self.Calibration(100)
 
 	def calcDT(self):
 		t_now = time.time()
@@ -65,22 +63,22 @@ class complement_Filter:
 		self.g_z = msg.angular_velocity.z
 		
 	def mag_raw_data(self, msg):
-		self.m_x=msg.magnetic_field.x
-		self.m_y=msg.magnetic_field.y
-		self.m_z=msg.magnetic_field.z
+		self.m_x = msg.magnetic_field.x
+		self.m_y = msg.magnetic_field.y
+		self.m_z = msg.magnetic_field.z
 
-	def Calibration(self):
+	def Calibration(self, goal):
 		IsBias = False
 		numBias = 0
-		# number of data for measuring bias of gyroscope
-		goalBias = 100 
+		goalBias = goal
+		# number of data for measuring bias of gyroscope 
 		g_x_sum, g_y_sum, g_z_sum = 0, 0, 0
 		m_x_max, m_y_max, m_z_max = 0, 0, 0
 		m_x_min, m_y_min, m_z_min = 0, 0, 0
 		while IsBias == False :
+			if goalBias == 100 :
+				m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min = self.getMagCali(m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min)
 			g_x_sum, g_y_sum, g_z_sum, numBias = self.getGyroCali(g_x_sum, g_y_sum, g_z_sum, numBias, goalBias)
-			m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min = self.getMagCali(m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min)
-
 
 	def getGyroCali(self, sum_x, sum_y, sum_z, num, goal):
 		sum_x = sum_x + self.g_x
@@ -163,16 +161,23 @@ class complement_Filter:
 		beta = self.gainMag(self.m_x, self.m_y, self.m_z) * self.Beta
 		lx, ly, lz = rotateVectorQuaternion(self.m_x, self.m_y, self.m_z, self.q0, -self.q1, -self.q2, -self.q3)
 		gamma = lx ** 2 + ly ** 2
-		print("gamma" + str(gamma))
 		q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
 		q1_mag = 0
 		q2_mag = 0
 		q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
 		q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
 		return q0_mag, q1_mag, q2_mag, q3_mag
+
+	def steadyState(self):
+		norm = sqrt(self.g_x ** 2 + self.g_y ** 2 + self.g_z ** 2)
+		if norm < 0.2
+			return True
+		return False
 		
 	def imu_Mag_Complementary(self):
 		while not rospy.is_shutdown():
+			if self.steadyState() == True:
+				Calibration(10)
 			q0_gyro, q1_gyro, q2_gyro, q3_gyro = self.getPrediction()
 			q0_acc, q1_acc, q2_acc, q3_acc = self.acc_Correction()
 			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(q0_gyro, q1_gyro, q2_gyro, q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
@@ -187,7 +192,7 @@ if __name__=="__main__":
 	try:
 		rospy.loginfo("complementary filter start!")
 		complement.imu_Mag_Complementary()
-		rospy.sleep(0.5)
+		rospy.sleep(self.frequency)
 	except rospy.ROSInterruptException:
 		print "ROS terminated"
 		pass
