@@ -51,9 +51,18 @@ class complement_Filter:
 		self.q3 = 0
 		self.Alpha = 0.5
 		self.Beta = 0.5
+		self.a_x = 0
+		self.a_y = 0
+		self.a_z = 1
+		self.g_x = 0
+		self.g_y = 0
+		self.g_z = 0
+		self.m_x = 0
+		self.m_y = 0
+		self.m_z = 0
 		self.t_prev = time.time()
 		while self.IsBias == False:
-			rospy.Subscriber("/imu_raw",Imu,self.imu_raw_data)
+			rospy.Subscriber("/imu_raw", Imu,self.imu_raw_data)
 			self.getBias()
 
 	def calcDT(self):
@@ -62,12 +71,12 @@ class complement_Filter:
 		self.t_prev = t_now
 
 	def imu_raw_data(self,msg):
-		self.a_x=msg.linear_acceleration.x
-		self.a_y=msg.linear_acceleration.y
-		self.a_z=msg.linear_acceleration.z
-		self.g_x=msg.angular_velocity.x
-		self.g_y=msg.angular_velocity.y
-		self.g_z=msg.angular_velocity.z
+		self.a_x = msg.linear_acceleration.x
+		self.a_y = msg.linear_acceleration.y
+		self.a_z = msg.linear_acceleration.z
+		self.g_x = msg.angular_velocity.x
+		self.g_y = msg.angular_velocity.y
+		self.g_z = msg.angular_velocity.z
 
 	def mag_raw_data(self,msg):
 		self.m_x=msg.magnetic_field.x
@@ -86,9 +95,9 @@ class complement_Filter:
 
 	def getAccelGyro(self):
 		rospy.Subscriber("/imu_raw",Imu,self.imu_raw_data)
-		self.g_x=self.g_x-self.g_xBias
-		self.g_y=self.g_y-self.g_yBias
-		self.g_z=self.g_z-self.g_zBias
+		self.g_x = self.g_x - self.g_xBias
+		self.g_y = self.g_y - self.g_yBias
+		self.g_z = self.g_z - self.g_zBias
 	
 	def getMagnetic(self):
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
