@@ -5,16 +5,13 @@ from geometry_msgs.msg import Vector3
 from sensor_msgs.msg import MagneticField
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Quaternion
+from geometry_msgs.msg import PoseWithCovariance
 import smbus
 import numpy as np
 import time
 import math
 import numpy.linalg as lin
 import tf
-
-
-
-
 
 def quat_mult(a_1, a_2, a_3, a_4, b_1, b_2, b_3, b_4):
 	q_0 = a_1*b_1 - a_2*b_2 - a_3*b_3 - a_4*b_4
@@ -100,7 +97,7 @@ class kalman_Filter:
 			self.q_mag = np.matrix([self.q_mag_x, self.q_mag_y, self.q_mag_z, self.q_mag_w])
 	
 	def kalman(self):
-	
+		pose_topic = PoseWithCovariance()
 		kalman_topic = Quaternion()
 		self.get_mag_quat()
 		self.get_acc_quat()
@@ -120,6 +117,13 @@ class kalman_Filter:
 		kalman_topic.y = self.X[1,0]
 		kalman_topic.z = self.X[2,0]
 		kalman_topic.w = self.X[3,0]
+		pose_topic.Pose.Point.x = 0
+		pose_topic.Pose.Point.y = 0
+		pose_topic.Pose.Point.z = 0
+		pose_topic.pose.Quaternion.x = self.X[1,0]
+		pose_topic.pose.Quaternion.y = self.X[2,0]
+		pose_topic.pose.Quaternion.z = self.X[3,0]
+		pose_topic.pose.Quaternion.w = self.X[0,0]
 		self.Kalman_pub.publish(kalman_topic)
 
 		
@@ -138,7 +142,7 @@ if __name__ == "__main__":
 
 			 
 			Filtering.kalman()
-			rospy.sleep(0.5)
+			rospy.sleep(0.03)
 	except rospy.ROSInterruptException: 
 		print "ROS terminated"
 		pass
