@@ -69,8 +69,8 @@ class kalman_Filter:
 		self.gyro_z = 1	
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
-		
-		self.Kalman_pub = rospy.Publisher("/quaternion",Quaternion, queue_size=1)
+		self.Kalman_cov_pub = rospy.Publisher("/pose_covariance",PoseWithCovariance, queue_size=1)
+		self.Kalman_pub = rospy.Publisher("/Kalman_quat",Quaternion, queue_size=1)
 
 	def get_acc_quat(self):
 		
@@ -117,14 +117,16 @@ class kalman_Filter:
 		kalman_topic.y = self.X[1,0]
 		kalman_topic.z = self.X[2,0]
 		kalman_topic.w = self.X[3,0]
-		pose_topic.Pose.Point.x = 0
-		pose_topic.Pose.Point.y = 0
-		pose_topic.Pose.Point.z = 0
-		pose_topic.pose.Quaternion.x = self.X[1,0]
-		pose_topic.pose.Quaternion.y = self.X[2,0]
-		pose_topic.pose.Quaternion.z = self.X[3,0]
-		pose_topic.pose.Quaternion.w = self.X[0,0]
+		pose_topic.pose.position.x = 0
+		pose_topic.pose.position.y = 0
+		pose_topic.pose.position.z = 0
+		pose_topic.pose.orientation.x = self.X[1,0]
+		pose_topic.pose.orientation.y = self.X[2,0]
+		pose_topic.pose.orientation.z = self.X[3,0]
+		pose_topic.pose.orientation.w = self.X[0,0]
+		pose_topic.covariance = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.0289, 0.0289, 0.1207,0,0,0,0.0289, 0.0289, 0.1207,0,0,0,0.1207,0.1207,0.5041]
 		self.Kalman_pub.publish(kalman_topic)
+		self.Kalman_cov_pub.publish(pose_topic)
 
 		
 		
