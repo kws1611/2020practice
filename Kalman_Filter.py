@@ -4,6 +4,7 @@ import rospy
 from geometry_msgs.msg import Vector3
 from sensor_msgs.msg import MagneticField
 from sensor_msgs.msg import Imu
+from geometry_msgs.msg import Quaternion
 import smbus
 import numpy as np
 import time
@@ -36,6 +37,7 @@ def norm_quat(a_1, a_2, a_3, a_4):
 
 
 class kalman_Filter:
+	
 	def imu_raw_data(self, msg):
 		self.imu_data = msg
 		self.acc_x = self.imu_data.linear_acceleration.x
@@ -51,6 +53,7 @@ class kalman_Filter:
 		self.mag_y = float(self.mag_data.magnetic_field.y)
 		self.mag_z = float(self.mag_data.magnetic_field.z)
 	def __init__(self):
+		self.kalman_topic = Quaternion()
 		self.X = np.matrix('1;0;0;0')
 		self.P = np.identity(4)
 		self.dt = 0.01
@@ -69,6 +72,8 @@ class kalman_Filter:
 		self.gyro_z = 1	
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
+		
+		self.Kalman_pub = rospy.Publisher("/quaternion",Quaternion, queue_size=1)
 
 	def get_acc_quat(self):
 		
@@ -95,8 +100,8 @@ class kalman_Filter:
 			self.q_mag = np.matrix([self.q_mag_x, self.q_mag_y, self.q_mag_z, self.q_mag_w])
 	
 	def kalman(self):
-
 	
+		kalman_topic = Quaternion()
 		self.get_mag_quat()
 		self.get_acc_quat()
 
@@ -111,7 +116,12 @@ class kalman_Filter:
 		self.X = self.Xp + self.K*(self.Z - self.H*self.Xp)
 		self.X = norm_quat(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0])
 		self.P = self.Pp - self.K*self.H*self.Pp
-		print(self.X)
+		kalman_topic.x = self.X[0,0]
+		kalman_topic.y = self.X[1,0]
+		kalman_topic.z = self.X[2,0]
+		kalman_topic.w = self.X[3,0]
+		self.Kalman_pub.publish(kalman_topic)
+
 		
 		
 if __name__ == "__main__":
