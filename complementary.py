@@ -13,25 +13,25 @@ import numpy as np
 import os, sys
 
 def quaternionMultiplication(p0, p1, p2, p3, q0, q1, q2, q3):
-    r0 = p0 * q0 - p1 * q1 - p2 * q2 - p3 * q3
-    r1 = p0 * q1 + p1 * q0 + p2 * q3 - p3 * q2
-    r2 = p0 * q2 - p1 * q3 + p2 * q0 + p3 * q1
-    r3 = p0 * q3 + p1 * q2 - p2 * q1 + p3 * q0
-    return r0, r1, r2, r3
+	r0 = p0 * q0 - p1 * q1 - p2 * q2 - p3 * q3
+	r1 = p0 * q1 + p1 * q0 + p2 * q3 - p3 * q2
+	r2 = p0 * q2 - p1 * q3 + p2 * q0 + p3 * q1
+	r3 = p0 * q3 + p1 * q2 - p2 * q1 + p3 * q0
+	return r0, r1, r2, r3
 
 def normalizeQuaternion(q0, q1, q2, q3):
-    norm = sqrt(q0 ** 2 + q1 ** 2 + q2 ** 2 + q3 ** 2)
-    q0 = q0 / norm
-    q1 = q1 / norm
-    q2 = q2 / norm
-    q3 = q3 / norm
-    return q0, q1, q2, q3
+	norm = sqrt(q0 ** 2 + q1 ** 2 + q2 ** 2 + q3 ** 2)
+	q0 = q0 / norm
+	q1 = q1 / norm
+	q2 = q2 / norm
+	q3 = q3 / norm
+	return q0, q1, q2, q3
 
 def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
-    vx = (q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * x + 2 * (q1 * q2 - q0 * q3) * y + 2 * (q1 * q3 + q0 * q2) * z
-    vy = 2 * (q1 * q2 + q0 * q3) * x + (q0 * q0 - q1 * q1 + q2 * q2 - q3 * q3) * y + 2 * (q2 * q3 - q0 * q1) * z
-    vz = 2 * (q1 * q3 - q0 * q2) * x + 2 * (q2 * q3 + q0 * q1) * y + (q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) * z
-    return vx, vy, vz
+	vx = (q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * x + 2 * (q1 * q2 - q0 * q3) * y + 2 * (q1 * q3 + q0 * q2) * z
+	vy = 2 * (q1 * q2 + q0 * q3) * x + (q0 * q0 - q1 * q1 + q2 * q2 - q3 * q3) * y + 2 * (q2 * q3 - q0 * q1) * z
+	vz = 2 * (q1 * q3 - q0 * q2) * x + 2 * (q2 * q3 + q0 * q1) * y + (q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) * z
+	return vx, vy, vz
 
 class complement_Filter:
 	def __init__(self):
@@ -40,7 +40,7 @@ class complement_Filter:
 		self.g_xBias, self.g_yBias, self.g_zBias = 0, 0, 0
 		self.m_xBias, self.m_yBias, self.m_zBias = 0, 0, 0
 		self.m_xScale, self.m_yScale, self.m_zScale = 0, 0 ,0
-		self.Alpha, self.Beta = 0.5, 0.5
+		self.Alpha, self.Beta = 0.8, 0.8
 		self.q0, self.q1, self.q2, self.q3 = 1, 0, 0, 0
 		self.a_x, self.a_y, self.a_z = 0, 0, 1
 		self.g_x, self.g_y, self.g_z = 0, 0, 0
@@ -135,6 +135,7 @@ class complement_Filter:
 		q1_gyro = self.q1 - 0.5 * q1_gyro * self.dt
 		q2_gyro = self.q2 - 0.5 * q2_gyro * self.dt
 		q3_gyro = self.q3 - 0.5 * q3_gyro * self.dt
+		q0_gyro, q1_gyro, q2_gyro, q3_gyro = normalizeQuaternion(q0_gyro, q1_gyro, q2_gyro, q3_gyro)
 		return q0_gyro, q1_gyro, q2_gyro, q3_gyro
 		
 	def gainFunction(self, a, b, c):
@@ -158,7 +159,7 @@ class complement_Filter:
 		q0_acc, q1_acc, q2_acc, q3_acc = normalizeQuaternion(q0_acc, q1_acc, q2_acc, q3_acc)
 		return q0_acc, q1_acc, q2_acc, q3_acc
 
-	def mag_Correction(self):
+	def  mag_Correction(self):
 		self.getMagnetic()
 		beta = self.gainFunction(self.m_x, self.m_y, self.m_z) * self.Beta
 		lx, ly, lz = rotateVectorQuaternion(self.m_x, self.m_y, self.m_z, self.q0, -self.q1, -self.q2, -self.q3)
@@ -194,7 +195,6 @@ if __name__=="__main__":
 	try:
 		rospy.loginfo("complementary filter start!")
 		complement.imu_Mag_Complementary()
-		rospy.sleep(self.frequency)
 	except rospy.ROSInterruptException:
 		print "ROS terminated"
 		pass
