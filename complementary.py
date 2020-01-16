@@ -170,7 +170,7 @@ class complement_Filter:
 
 	def steadyState(self):
 		norm = sqrt(self.g_x ** 2 + self.g_y ** 2 + self.g_z ** 2)
-		if norm < 0.2
+		if norm < 0.2:
 			return True
 		return False
 		
