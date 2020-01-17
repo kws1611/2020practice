@@ -5,7 +5,7 @@ from geometry_msgs.msg import Vector3
 from sensor_msgs.msg import MagneticField
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Quaternion
-from geometry_msgs.msg import PoseWithCovariance
+from geometry_msgs.msg import PoseWithCovarianceStamped
 import smbus
 import numpy as np
 import time
@@ -69,7 +69,7 @@ class kalman_Filter:
 		self.gyro_z = 1	
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
-		self.Kalman_cov_pub = rospy.Publisher("/pose_covariance",PoseWithCovariance, queue_size=1)
+		self.Kalman_cov_pub = rospy.Publisher("/pose_covariance",PoseWithCovarianceStamped, queue_size=1)
 		self.Kalman_pub = rospy.Publisher("/Kalman_quat",Quaternion, queue_size=1)
 
 	def get_acc_quat(self):
@@ -97,8 +97,9 @@ class kalman_Filter:
 			self.q_mag = np.matrix([self.q_mag_x, self.q_mag_y, self.q_mag_z, self.q_mag_w])
 	
 	def kalman(self):
-		pose_topic = PoseWithCovariance()
+		pose_topic = PoseWithCovarianceStamped()
 		kalman_topic = Quaternion()
+	
 		self.get_mag_quat()
 		self.get_acc_quat()
 
@@ -117,17 +118,18 @@ class kalman_Filter:
 		kalman_topic.y = self.X[1,0]
 		kalman_topic.z = self.X[2,0]
 		kalman_topic.w = self.X[3,0]
-		pose_topic.pose.position.x = 0
-		pose_topic.pose.position.y = 0
-		pose_topic.pose.position.z = 0
-		pose_topic.pose.orientation.x = self.X[1,0]
-		pose_topic.pose.orientation.y = self.X[2,0]
-		pose_topic.pose.orientation.z = self.X[3,0]
-		pose_topic.pose.orientation.w = self.X[0,0]
-		pose_topic.covariance = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.0289, 0.0289, 0.1207,0,0,0,0.0289, 0.0289, 0.1207,0,0,0,0.1207,0.1207,0.5041]
+		pose_topic.header.stamp = rospy.Time.now()
+		pose_topic.header.frame_id = "map"
+		pose_topic.pose.pose.position.x = 0
+		pose_topic.pose.pose.position.y = 0
+		pose_topic.pose.pose.position.z = 0
+		pose_topic.pose.pose.orientation.x = self.X[1,0]
+		pose_topic.pose.pose.orientation.y = self.X[2,0]
+		pose_topic.pose.pose.orientation.z = self.X[3,0]
+		pose_topic.pose.pose.orientation.w = self.X[0,0]
+		pose_topic.pose.covariance = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.0289, 0.0289, 0.1207,0,0,0,0.0289, 0.0289, 0.1207,0,0,0,0.1207,0.1207,0.5041]
 		self.Kalman_pub.publish(kalman_topic)
 		self.Kalman_cov_pub.publish(pose_topic)
-
 		
 		
 if __name__ == "__main__":
@@ -144,7 +146,7 @@ if __name__ == "__main__":
 
 			 
 			Filtering.kalman()
-			rospy.sleep(0.03)
+			rospy.sleep(0.003)
 	except rospy.ROSInterruptException: 
 		print "ROS terminated"
 		pass

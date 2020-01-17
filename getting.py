@@ -293,7 +293,7 @@ class MPU:
 			print(str(self.mx)+','+str(self.my)+','+str(self.mz))
 
 			# Small delay before next loop (data available every 10 ms or 100 Hz)
-			time.sleep(0.012)
+			time.sleep(0.05)
 
 		# Get hard iron correction
 		self.magXbias = ((magMax[0] + magMin[0])/2) * self.magScaleFactor * self.magXcal
