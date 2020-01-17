@@ -27,6 +27,13 @@ def normalizeQuaternion(q0, q1, q2, q3):
 	q3 = q3 / norm
 	return q0, q1, q2, q3
 
+def normalization(v1, v2, v3):
+	norm = sqrt(v1 ** 2 + v2 ** 2 + v3 ** 2)
+	v1 = v1 / norm
+	v2 = v2 / norm
+ 	v3=  v3 / norm
+	return v1, v2, v3
+
 def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 	vx = (q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * x + 2 * (q1 * q2 - q0 * q3) * y + 2 * (q1 * q3 + q0 * q2) * z
 	vy = 2 * (q1 * q2 + q0 * q3) * x + (q0 * q0 - q1 * q1 + q2 * q2 - q3 * q3) * y + 2 * (q2 * q3 - q0 * q1) * z
@@ -151,7 +158,8 @@ class complement_Filter:
 	
 	def acc_Correction(self):
 		alpha = self.gainFunction(self.a_x, self.a_y, self.a_z) * self.Alpha
-		gx, gy, gz = rotateVectorQuaternion(self.a_x, self.a_y, self.a_z, self.q0, -self.q1, -self.q2, -self.q3)
+		a_x, a_y, a_z = normalization(self.a_x, self.a_y, self.a_z)
+		gx, gy, gz = rotateVectorQuaternion(a_x, a_y, a_z, self.q0, -self.q1, -self.q2, -self.q3)
 		q0_acc = alpha * sqrt(0.5 * (gx + 1)) + (1 - alpha)
 		q1_acc = alpha * (-gy / sqrt(2 * (gz + 1)))
 		q2_acc = alpha * (gx / sqrt(2 * (gz + 1)))
@@ -162,7 +170,8 @@ class complement_Filter:
 	def  mag_Correction(self):
 		self.getMagnetic()
 		beta = self.gainFunction(self.m_x, self.m_y, self.m_z) * self.Beta
-		lx, ly, lz = rotateVectorQuaternion(self.m_x, self.m_y, self.m_z, self.q0, -self.q1, -self.q2, -self.q3)
+		m_x, m_y, m_z = normalization(self.m_x, self.m_y, self.m_z)
+		lx, ly, lz = rotateVectorQuaternion(m_x, m_y, m_z, self.q0, -self.q1, -self.q2, -self.q3)
 		gamma = lx ** 2 + ly ** 2
 		q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
 		q1_mag = 0
@@ -186,7 +195,7 @@ class complement_Filter:
 			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(q0_gyro, q1_gyro, q2_gyro, q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
 			q0_mag, q1_mag, q2_mag, q3_mag = self.mag_Correction()
 			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, q0_mag, q1_mag, q2_mag, q3_mag)
-			print(str(self.q0) + str(self.q1) + str(self.q2) + str(self.q3))
+			print(str(self.q0) + " " + str(self.q1) + " " + str(self.q2) + " " + str(self.q3))
 
 if __name__=="__main__":
 	rospy.init_node("Complementary", anonymous = True)
