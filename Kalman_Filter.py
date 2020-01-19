@@ -67,6 +67,7 @@ class kalman_Filter:
 		self.gyro_x = 1
 		self.gyro_y = 1
 		self.gyro_z = 1	
+		self.rate = rospy.Rate(100)
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
 		self.Kalman_cov_pub = rospy.Publisher("/pose_covariance",PoseWithCovarianceStamped, queue_size=1)
@@ -130,6 +131,7 @@ class kalman_Filter:
 		pose_topic.pose.covariance = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.0289, 0.0289, 0.1207,0,0,0,0.0289, 0.0289, 0.1207,0,0,0,0.1207,0.1207,0.5041]
 		self.Kalman_pub.publish(kalman_topic)
 		self.Kalman_cov_pub.publish(pose_topic)
+		self.rate.sleep()
 		
 		
 if __name__ == "__main__":
@@ -146,7 +148,6 @@ if __name__ == "__main__":
 
 			 
 			Filtering.kalman()
-			rospy.sleep(0.003)
 	except rospy.ROSInterruptException: 
 		print "ROS terminated"
 		pass

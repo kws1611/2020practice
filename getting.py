@@ -65,7 +65,7 @@ class MPU:
 		self.PWR_MGMT_1       = 0x6B
 		self.ACCEL_CONFIG     = 0x1C
 
-
+		self.rate = rospy.Rate(100)
 		self.imu_raw_pub = rospy.Publisher("/imu_raw", Imu, queue_size=10)
 		self.mag_raw_pub = rospy.Publisher("/mag_raw", MagneticField, queue_size=10)
 
@@ -229,7 +229,7 @@ class MPU:
 		self.bus.write_byte_data(self.MPU9250_ADDRESS, self.I2C_SLV0_ADDR, self.AK8963_ADDRESS | 0x80);    # Set the I2C slave address of AK8963 and set for read.
 		self.bus.write_byte_data(self.MPU9250_ADDRESS, self.I2C_SLV0_REG, self.AK8963_XOUT_L);             # I2C slave 0 register address from where to begin data transfer
 		self.bus.write_byte_data(self.MPU9250_ADDRESS, self.I2C_SLV0_CTRL, 0x87);                          # Enable I2C and read 7 bytes
-		time.sleep(0.003)
+		time.sleep(0.005)
 
 		# Read 7 values [Low High] and one more byte (overflow check)
 		try:
@@ -428,12 +428,13 @@ class MPU:
 
 			self.mag_raw_pub.publish(mag_topic)
 
-	#			self.rate.sleep()
+			self.rate.sleep()
 
 
 	
 
 def main():
+	rospy.init_node("imu_raw_publisher", anonymous=True)
 	# Set up class
 	gyro = 500      # 250, 500, 1000, 2000 [deg/s]
 	acc = 4         # 2, 4, 7, 16 [g]
@@ -453,7 +454,7 @@ def main():
 
 	# Calibrate the gyro with N points
 	mpu.calibrateGyro(1000)
-	rospy.init_node("imu_raw_publisher", anonymous=True)
+
 	rospy.loginfo("imu_raw_publisher_node initialized")
 
 	# Run until stopped
