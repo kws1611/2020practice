@@ -53,7 +53,7 @@ class kalman_Filter:
 		self.kalman_topic = Quaternion()
 		self.X = np.matrix('1;0;0;0')
 		self.P = np.identity(4)
-		self.dt = 0.01
+		self.dt = 1/100
 		self.H = np.identity(4)
 		self.Q = np.matrix('0 -0.4 -0.65 -0.4; 0.4 0 0.4 -0.65; 0.65 -0.4 0 0.4; 0.4 0.65 -0.4 0')
 		self.R = 10**(-4)*np.matrix('0.5929 0 0 0;0 0.0289 0 0; 0 0 0.0289 0; 0 0 0 0.5929')
