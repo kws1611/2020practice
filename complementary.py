@@ -218,7 +218,7 @@ class complement_Filter:
 			m = sqrt(self.m_x**2 + self.m_y**2 + self.m_z**2)
 			mag_topic.linear_acceleration.x = self.m_x / m
 			mag_topic.linear_acceleration.y = self.m_y / m
-			mag_topic.linear_acceleration.z = self.m_z / m
+			mag_topic.linear_acceleration.z = 0
 			self.pub.publish(quat_topic)
 			self.magpub.publish(mag_topic)
 
