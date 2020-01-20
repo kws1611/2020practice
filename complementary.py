@@ -56,7 +56,7 @@ class complement_Filter:
 		self.a_x, self.a_y, self.a_z = 0, 0, 1
 		self.g_x, self.g_y, self.g_z = 0, 0, 0
 		self.m_x, self.m_y, self.m_z = 0, 0, 0
-		self.t_prev = time.time()
+		#self.t_prev = time.time()
 		self.Calibration(100)
 
 	def calcDT(self):
@@ -83,13 +83,9 @@ class complement_Filter:
 		goalBias = goal
 		# number of data for measuring bias of gyroscope 
 		g_x_sum, g_y_sum, g_z_sum = 0, 0, 0
-		#m_x_max, m_y_max, m_z_max = 0, 0, 0
-		#m_x_min, m_y_min, m_z_min = 0, 0, 0
 		while IsBias == False :
 			g_x_sum, g_y_sum, g_z_sum, numBias, IsBias = self.getGyroCali(g_x_sum, g_y_sum, g_z_sum, numBias, goalBias)
-			#if goalBias == 100 :
-				#m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min = self.getMagCali(m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min, numBias, goalBias)
-			rospy.sleep(0.05)
+			rospy.rate.sleep(100)
 
 	def getGyroCali(self, sum_x, sum_y, sum_z, num, goal):
 		sum_x = sum_x + self.g_x
@@ -138,7 +134,8 @@ class complement_Filter:
 		self.m_z = (self.m_z - self.m_zBias) * self.m_zScale
 
 	def getPrediction(self):
-		self.calcDT()
+		#self.calcDT()
+		self.dt = 0.01
 		self.getAccelGyro()
 		q0_gyro,q1_gyro,q2_gyro,q3_gyro = quaternionMultiplication(0, self.g_x, self.g_y, self.g_z, self.q0, self.q1, self.q2, self.q3)
 		q0_gyro = self.q0 - 0.5 * q0_gyro * self.dt 
@@ -209,15 +206,7 @@ class complement_Filter:
 			quat_topic.pose.pose.orientation.y = self.q2
 			quat_topic.pose.pose.orientation.z = self.q3
 			quat_topic.pose.pose.orientation.w = self.q0
-			mag_topic = Imu()
-			mag_topic.header.stamp = rospy.Time.now()
-			mag_topic.header.frame_id = "map"
-			mag_topic.angular_velocity.x = 0
-			mag_topic.angular_velocity.y = 0
-			mag_topic.angular_velocity.z = 0
-			m = sqrt(self.m_x**2 + self.m_y**2 + self.m_z**2)
 			self.pub.publish(quat_topic)
-			self.magpub.publish(mag_topic)
 
 
 if __name__=="__main__":

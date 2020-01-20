@@ -382,9 +382,9 @@ class MPU:
 		self.gx /= self.gyroScaleFactor
 		self.gy /= self.gyroScaleFactor
 		self.gz /= self.gyroScaleFactor
-		self.gx = self.gx * np.py / 180
-		self.gy = self.gy * np.py / 180
-		self.gz = self.gz * np.py / 180
+		self.gx = self.gx * np.pi / 180
+		self.gy = self.gy * np.pi / 180
+		self.gz = self.gz * np.pi / 180
 
 		# Convert the accelerometer values to g force
 		self.ax /= self.accScaleFactor
