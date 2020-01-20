@@ -85,7 +85,7 @@ class complement_Filter:
 		g_x_sum, g_y_sum, g_z_sum = 0, 0, 0
 		while IsBias == False :
 			g_x_sum, g_y_sum, g_z_sum, numBias, IsBias = self.getGyroCali(g_x_sum, g_y_sum, g_z_sum, numBias, goalBias)
-			self.rate.sleep(100)
+			self.rate.sleep()
 
 	def getGyroCali(self, sum_x, sum_y, sum_z, num, goal):
 		sum_x = sum_x + self.g_x
