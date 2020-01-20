@@ -55,7 +55,6 @@ class complement_Filter:
 		self.g_x, self.g_y, self.g_z = 0, 0, 0
 		self.m_x, self.m_y, self.m_z = 0, 0, 0
 		self.t_prev = time.time()
-		self.frequency = 0.5
 		self.Calibration(100)
 
 	def calcDT(self):
@@ -190,8 +189,8 @@ class complement_Filter:
 		
 	def imu_Mag_Complementary(self):
 		while not rospy.is_shutdown():
-			if self.steadyState() == True:
-				self.Calibration(10)
+			#if self.steadyState() == True:
+			#	self.Calibration(10)
 			q0_gyro, q1_gyro, q2_gyro, q3_gyro = self.getPrediction()
 			q0_acc, q1_acc, q2_acc, q3_acc = self.acc_Correction()
 			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(q0_gyro, q1_gyro, q2_gyro, q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
@@ -221,9 +220,3 @@ if __name__=="__main__":
 	except rospy.ROSInterruptException:
 		print "ROS terminated"
 		pass
-		
-
-		
-		
-
-	
