@@ -2,6 +2,7 @@
 
 import rospy
 from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import MagneticField
 from numpy import sqrt, pi
@@ -42,6 +43,7 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 
 class complement_Filter:
 	def __init__(self):
+		self.pub=rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size=1)
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0, 0, 0
@@ -195,7 +197,19 @@ class complement_Filter:
 			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(q0_gyro, q1_gyro, q2_gyro, q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
 			q0_mag, q1_mag, q2_mag, q3_mag = self.mag_Correction()
 			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, q0_mag, q1_mag, q2_mag, q3_mag)
-			print(str(self.q0) + " " + str(self.q1) + " " + str(self.q2) + " " + str(self.q3))
+			quat_topic = PoseWithCovarianceStamped()
+			quat_topic.header.stamp = rospy.Time.now()
+			quat_topic.header.frame_id = "map"
+			quat_topic.pose.pose.position.x = 0
+			quat_topic.pose.pose.position.y = 0
+			quat_topic.pose.pose.position.z = 0
+			quat_topic.pose.pose.orientation.x = self.q1
+			quat_topic.pose.pose.orientation.y = self.q2
+			quat_topic.pose.pose.orientation.z = self.q3
+			quat_topic.pose.pose.orientation.w = self.q0
+			self.pub.publish(quat_topic)
+
+
 
 if __name__=="__main__":
 	rospy.init_node("Complementary", anonymous = True)
