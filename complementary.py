@@ -43,12 +43,14 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 
 class complement_Filter:
 	def __init__(self):
-		self.pub=rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size=1)
+		self.pub=rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
+		self.magpub=rospy.Publisher("/magquat", Imu, queue_size =1)
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0, 0, 0
 		self.m_xBias, self.m_yBias, self.m_zBias = 0, 0, 0
 		self.m_xScale, self.m_yScale, self.m_zScale = 0, 0 ,0
+
 		self.Alpha, self.Beta = 0.8, 0.8
 		self.q0, self.q1, self.q2, self.q3 = 1, 0, 0, 0
 		self.a_x, self.a_y, self.a_z = 0, 0, 1
@@ -168,7 +170,7 @@ class complement_Filter:
 		q0_acc, q1_acc, q2_acc, q3_acc = normalizeQuaternion(q0_acc, q1_acc, q2_acc, q3_acc)
 		return q0_acc, q1_acc, q2_acc, q3_acc
 
-	def  mag_Correction(self):
+	def mag_Correction(self):
 		self.getMagnetic()
 		beta = self.gainFunction(self.m_x, self.m_y, self.m_z) * self.Beta
 		m_x, m_y, m_z = normalization(self.m_x, self.m_y, self.m_z)
@@ -179,6 +181,7 @@ class complement_Filter:
 		q2_mag = 0
 		q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
 		q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
+		mag_topic = PoseWithCovarianceStamped()
 		return q0_mag, q1_mag, q2_mag, q3_mag
 
 	def steadyState(self):
@@ -206,8 +209,15 @@ class complement_Filter:
 			quat_topic.pose.pose.orientation.y = self.q2
 			quat_topic.pose.pose.orientation.z = self.q3
 			quat_topic.pose.pose.orientation.w = self.q0
-			self.pub.publish(quat_topic)
-
+			mag_topic = Imu()
+			mag_topic.header.stamp = rospy.Time.now()
+			mag_topic.header.frame_id = "map"
+			mag_topic.angular_velocity.x = 0
+			mag_topic.angular_velocity.y = 0
+			mag_topic.angular_velocity.z = 0
+			m = sqrt(self.m_x ** 2 + self.m_y ** 2)
+			mag_topic.linear_acceleration.x = self.m_x / m
+			mag_topic.linear_acceleration.y = self.m_y / m
 
 
 if __name__=="__main__":
