@@ -50,7 +50,7 @@ class complement_Filter:
 		self.g_xBias, self.g_yBias, self.g_zBias = 0, 0, 0
 		self.m_xBias, self.m_yBias, self.m_zBias = 0, 0, 0
 		self.m_xScale, self.m_yScale, self.m_zScale = 1, 1 ,1
-
+		self.rate = rospy.Rate(100)
 		self.Alpha, self.Beta = 0.8, 0.8
 		self.q0, self.q1, self.q2, self.q3 = 1, 0, 0, 0
 		self.a_x, self.a_y, self.a_z = 0, 0, 1
@@ -85,7 +85,7 @@ class complement_Filter:
 		g_x_sum, g_y_sum, g_z_sum = 0, 0, 0
 		while IsBias == False :
 			g_x_sum, g_y_sum, g_z_sum, numBias, IsBias = self.getGyroCali(g_x_sum, g_y_sum, g_z_sum, numBias, goalBias)
-			rospy.rate.sleep(100)
+			self.rate.sleep(100)
 
 	def getGyroCali(self, sum_x, sum_y, sum_z, num, goal):
 		sum_x = sum_x + self.g_x
