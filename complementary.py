@@ -140,8 +140,8 @@ class complement_Filter:
 	def getPrediction(self):
 		self.calcDT()
 		self.getAccelGyro()
-		q0_gyro,q1_gyro,q2_gyro,q3_gyro = quaternionMultiplication(0, self.g_x, self.g_y, self.g_z, self.q0, self.q1, self.q2, self.q3)
-		q0_gyro = self.q0 - 0.5 * q0_gyro * self.dt
+		q0_gyro,q1_gyro,q2_gyro,q3_gyro = quaternionMultiplication(0, self.g_x / 180 * pi, self.g_y / 180 * pi, self.g_z / 180 * pi, self.q0, self.q1, self.q2, self.q3)
+		q0_gyro = self.q0 - 0.5 * q0_gyro * self.dt 
 		q1_gyro = self.q1 - 0.5 * q1_gyro * self.dt
 		q2_gyro = self.q2 - 0.5 * q2_gyro * self.dt
 		q3_gyro = self.q3 - 0.5 * q3_gyro * self.dt
@@ -218,7 +218,7 @@ class complement_Filter:
 			m = sqrt(self.m_x**2 + self.m_y**2 + self.m_z**2)
 			mag_topic.linear_acceleration.x = self.m_x / m
 			mag_topic.linear_acceleration.y = self.m_y / m
-			mag_topic.linear_acceleration.z = 0
+			mag_topic.linear_acceleration.z = self.m_z / m
 			self.pub.publish(quat_topic)
 			self.magpub.publish(mag_topic)
 
