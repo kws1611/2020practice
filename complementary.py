@@ -218,6 +218,8 @@ class complement_Filter:
 			mag_topic.linear_acceleration.x = self.m_x
 			mag_topic.linear_acceleration.y = self.m_y
 			mag_topic.linear_acceleration.z = self.m_z
+			self.pub.publish(quat_topic)
+			self.magpub.publish(mag_topic)
 
 
 if __name__=="__main__":
