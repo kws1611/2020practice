@@ -217,7 +217,7 @@ class complement_Filter:
 			mag_topic.angular_velocity.z = 0
 			mag_topic.linear_acceleration.x = self.m_x
 			mag_topic.linear_acceleration.y = self.m_y
-			mag_topic.linear_accelreation.z = self.m_z
+			mag_topic.linear_acceleration.z = self.m_z
 
 
 if __name__=="__main__":
