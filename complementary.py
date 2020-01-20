@@ -49,9 +49,9 @@ class complement_Filter:
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0, 0, 0
 		self.m_xBias, self.m_yBias, self.m_zBias = 0, 0, 0
-		self.m_xScale, self.m_yScale, self.m_zScale = 0, 0 ,0
+		self.m_xScale, self.m_yScale, self.m_zScale = 1, 1 ,1
 
-		self.Alpha, self.Beta = 0.8, 0.2
+		self.Alpha, self.Beta = 0.8, 0.8
 		self.q0, self.q1, self.q2, self.q3 = 1, 0, 0, 0
 		self.a_x, self.a_y, self.a_z = 0, 0, 1
 		self.g_x, self.g_y, self.g_z = 0, 0, 0
@@ -83,12 +83,12 @@ class complement_Filter:
 		goalBias = goal
 		# number of data for measuring bias of gyroscope 
 		g_x_sum, g_y_sum, g_z_sum = 0, 0, 0
-		m_x_max, m_y_max, m_z_max = 0, 0, 0
-		m_x_min, m_y_min, m_z_min = 0, 0, 0
+		#m_x_max, m_y_max, m_z_max = 0, 0, 0
+		#m_x_min, m_y_min, m_z_min = 0, 0, 0
 		while IsBias == False :
 			g_x_sum, g_y_sum, g_z_sum, numBias, IsBias = self.getGyroCali(g_x_sum, g_y_sum, g_z_sum, numBias, goalBias)
-			if goalBias == 100 :
-				m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min = self.getMagCali(m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min, numBias, goalBias)
+			#if goalBias == 100 :
+				#m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min = self.getMagCali(m_x_max, m_y_max, m_z_max, m_x_min, m_y_min, m_z_min, numBias, goalBias)
 			rospy.sleep(0.05)
 
 	def getGyroCali(self, sum_x, sum_y, sum_z, num, goal):
@@ -140,7 +140,7 @@ class complement_Filter:
 	def getPrediction(self):
 		self.calcDT()
 		self.getAccelGyro()
-		q0_gyro,q1_gyro,q2_gyro,q3_gyro = quaternionMultiplication(0, self.g_x / 180 * pi, self.g_y / 180 * pi, self.g_z / 180 * pi, self.q0, self.q1, self.q2, self.q3)
+		q0_gyro,q1_gyro,q2_gyro,q3_gyro = quaternionMultiplication(0, self.g_x, self.g_y, self.g_z, self.q0, self.q1, self.q2, self.q3)
 		q0_gyro = self.q0 - 0.5 * q0_gyro * self.dt 
 		q1_gyro = self.q1 - 0.5 * q1_gyro * self.dt
 		q2_gyro = self.q2 - 0.5 * q2_gyro * self.dt
@@ -216,9 +216,6 @@ class complement_Filter:
 			mag_topic.angular_velocity.y = 0
 			mag_topic.angular_velocity.z = 0
 			m = sqrt(self.m_x**2 + self.m_y**2 + self.m_z**2)
-			mag_topic.linear_acceleration.x = self.m_x / m
-			mag_topic.linear_acceleration.y = self.m_y / m
-			mag_topic.linear_acceleration.z = self.m_z / m
 			self.pub.publish(quat_topic)
 			self.magpub.publish(mag_topic)
 
