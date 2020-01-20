@@ -51,7 +51,7 @@ class complement_Filter:
 		self.m_xBias, self.m_yBias, self.m_zBias = 0, 0, 0
 		self.m_xScale, self.m_yScale, self.m_zScale = 0, 0 ,0
 
-		self.Alpha, self.Beta = 0.8, 0.8
+		self.Alpha, self.Beta = 0.8, 0.2
 		self.q0, self.q1, self.q2, self.q3 = 1, 0, 0, 0
 		self.a_x, self.a_y, self.a_z = 0, 0, 1
 		self.g_x, self.g_y, self.g_z = 0, 0, 0
