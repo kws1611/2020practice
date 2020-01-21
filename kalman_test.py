@@ -30,6 +30,18 @@ def norm_quat(a_1, a_2, a_3, a_4):
 	q = np.matrix([q_0, q_1, q_2, q_3])
 	q = q.T
 	return q
+def normalization(v1, v2, v3):
+	norm = math.sqrt(v1 ** 2 + v2 ** 2 + v3 ** 2)
+	v1 = v1 / norm
+	v2 = v2 / norm
+ 	v3=  v3 / norm
+	return v1, v2, v3
+
+def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
+	vx = (q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * x + 2 * (q1 * q2 - q0 * q3) * y + 2 * (q1 * q3 + q0 * q2) * z
+	vy = 2 * (q1 * q2 + q0 * q3) * x + (q0 * q0 - q1 * q1 + q2 * q2 - q3 * q3) * y + 2 * (q2 * q3 - q0 * q1) * z
+	vz = 2 * (q1 * q3 - q0 * q2) * x + 2 * (q2 * q3 + q0 * q1) * y + (q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) * z
+	return vx, vy, vz
 
 class kalman_Filter:
 	
@@ -53,7 +65,7 @@ class kalman_Filter:
 		self.kalman_topic = Quaternion()
 		self.X = np.matrix('1;0;0;0')
 		self.P = np.identity(4)
-		self.dt = float(1)
+		self.dt = float(1.0/100)
 		self.H = np.identity(4)
 		self.Q = 10**(-4)*np.matrix('0.64 0 0 0; 0 0.64 0 0 ; 0 0 0.169 0; 0 0 0 0.64 ')
 		#		self.Q = np.matrix('0 -0.4 -0.65 -0.4; 0.4 0 0.4 -0.65; 0.65 -0.4 0 0.4; 0.4 0.65 -0.4 0')
@@ -82,32 +94,34 @@ class kalman_Filter:
 		self.q_acc = np.matrix([math.sqrt(0.5*(self.az + 1)), -self.ay/(2*math.sqrt(0.5*(self.az+1))), self.ax/(2*math.sqrt(0.5*(self.az+1))), 0])
 	
 	def get_mag_quat(self):
-
-		self.gamma = math.sqrt(self.mag_x**2 + self.mag_y**2)
-		if self.mag_x >= 0:
-			self.q_mag_x = math.sqrt(self.gamma+self.mag_x*math.sqrt(self.gamma))/math.sqrt(2*self.gamma)
-			self.q_mag_y = 0
-			self.q_mag_z = 0
-			self.q_mag_w = float(self.mag_y/(2*0.5*math.sqrt(self.gamma+self.mag_x*math.sqrt(self.gamma))))
-			self.q_mag = np.matrix([self.q_mag_x, self.q_mag_y, self.q_mag_z, self.q_mag_w])
-		
-		if self.mag_x < 0:
-			self.q_mag_x = self.mag_y/(2*0.5*math.sqrt(self.gamma-self.mag_x*math.sqrt(self.gamma)))
-			self.q_mag_y = 0
-			self.q_mag_z = 0
-			self.q_mag_w = math.sqrt(self.gamma - self.mag_x*math.sqrt(self.gamma))/math.sqrt(2*self.gamma)
-			self.q_mag = np.matrix([self.q_mag_x, self.q_mag_y, self.q_mag_z, self.q_mag_w])
+		self.mag_x, self.mag_y, self.mag_z = normalization(self.mag_x, self.mag_y, self.mag_z)
+		lx, ly, lz = rotateVectorQuaternion(self.mag_x, self.mag_y, self.mag_z, self.q_acc[0,0], self.q_acc[0,1], self.q_acc[0,2], self.q_acc[0,3])
+		self.gamma = lx ** 2 + ly ** 2
+		if lx >= 0:
+			self.q0_mag = math.sqrt(self.gamma + lx * math.sqrt(self.gamma))/ math.sqrt(2 * self.gamma)
+			self.q1_mag = 0
+			self.q2_mag = 0
+			self.q3_mag = ly / math.sqrt(2 * (self.gamma + lx * math.sqrt(self.gamma)))
+			self.q_mag= norm_quat(self.q0_mag, self.q1_mag, self.q2_mag, self.q3_mag)
+		if lx < 0:
+			self.q0_mag = ly / math.sqrt(2 * (self.gamma - lx * math.sqrt(self.gamma)))
+			self.q1_mag = 0
+			self.q2_mag = 0
+			self.q3_mag = math.sqrt(self.gamma - lx * math.sqrt(self.gamma))/ math.sqrt(2 * self.gamma) 
+			self.q_mag= norm_quat(self.q0_mag, self.q1_mag, self.q2_mag, self.q3_mag)
 	
+
 	def kalman(self):
 		pose_topic = PoseWithCovarianceStamped()
 		kalman_topic = Quaternion()
-	
+		print(self.mag_x)
+				
 		self.get_acc_quat()
 		self.get_mag_quat()
 
-		self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[0,1],self.q_mag[0,2],self.q_mag[0,3])
+		self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0])
 			
-		self.A = np.identity(4) + float(0.005)*np.matrix([[0 ,round(-self.gyro_x,9), round(-self.gyro_y,9), round(-self.gyro_z,9)], [self.gyro_x, 0 ,self.gyro_z, -self.gyro_y], [self.gyro_y, -self.gyro_z ,0, self.gyro_x], [self.gyro_z, self.gyro_y ,-self.gyro_x, 0 ]])
+		self.A = np.identity(4) + self.dt*float(0.5)*np.matrix([[0 ,-self.gyro_x,-self.gyro_y,-self.gyro_z], [self.gyro_x, 0 ,self.gyro_z, -self.gyro_y], [self.gyro_y, -self.gyro_z ,0, self.gyro_x], [self.gyro_z, self.gyro_y ,-self.gyro_x, 0 ]])
 		# Kalman Filter
 		self.Xp = self.A*self.X
 		self.Pp = self.A*self.P*self.A.T +self.Q
