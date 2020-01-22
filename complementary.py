@@ -47,14 +47,9 @@ class complement_Filter:
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0, 0, 0
-<<<<<<< HEAD
 		self.Alpha, self.Beta, self.Gyro = 0.8, 0.8, 0.5
-=======
-		self.m_xBias, self.m_yBias, self.m_zBias = 0, 0, 0
-		self.m_xScale, self.m_yScale, self.m_zScale = 1, 1 ,1
 		self.rate = rospy.Rate(100)
 		self.Alpha, self.Beta = 0.8, 0.8
->>>>>>> a4892c11b555a68c5e90a5e2ecf49f239d5006cd
 		self.q0, self.q1, self.q2, self.q3 = 1, 0, 0, 0
 		self.a_x, self.a_y, self.a_z = 0, 0, 1
 		self.g_x, self.g_y, self.g_z = 0, 0, 0
@@ -80,22 +75,11 @@ class complement_Filter:
 		self.m_y = msg.magnetic_field.y
 		self.m_z = msg.magnetic_field.z
 
-<<<<<<< HEAD
 	def Calibration():
 		BiasIs = True
 		self.g_xBias = self.g_xBias + (g_x - self.g_xBias) * self.Gyro
 		self.g_yBias = self.g_yBias + (g_y - self.g_yBias) * self.Gyro
 		self.g_zBias = self.g_zBias + (g_z - self.g_zBias) * self.Gyro
-=======
-	def Calibration(self, goal):
-		IsBias = False
-		numBias = 0
-		goalBias = goal
-		# number of data for measuring bias of gyroscope 
-		g_x_sum, g_y_sum, g_z_sum = 0, 0, 0
-		while IsBias == False :
-			g_x_sum, g_y_sum, g_z_sum, numBias, IsBias = self.getGyroCali(g_x_sum, g_y_sum, g_z_sum, numBias, goalBias)
-			self.rate.sleep()
 
 	def getGyroCali(self, sum_x, sum_y, sum_z, num, goal):
 		sum_x = sum_x + self.g_x
@@ -109,7 +93,6 @@ class complement_Filter:
 			self.g_yBias = sum_y / goal
 			self.g_zBias = sum_z / goal
 		return sum_x, sum_y, sum_z, num, BiasIs
->>>>>>> a4892c11b555a68c5e90a5e2ecf49f239d5006cd
 
 	def getMagCali(self, max_x, max_y, max_z, min_x, min_y, min_z, num, goal):
 		if self.m_x > max_x:
