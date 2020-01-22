@@ -6,6 +6,7 @@ from sensor_msgs.msg import MagneticField
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseStamped
 import smbus
 import numpy as np
 import time
@@ -38,16 +39,16 @@ class error:
 		self.rate = rospy.Rate(100)
 		rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
 		rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
-		rospy.Subscriber(")
+		rospy.Subscriber("/vrpn_client_node/Quadcopter/pose",PoseStamped,self.motion_cb)
 		self.error_kalman_pub = rospy.Publisher("/kalman_error",Quaternion, queue_size=1)
 		self.error_comp_pub = rospy.Publisher("/comp_error",Quaternion, queue_size=1)
 
 	def motion_cb(self,msg):
 		self.mot_msg = msg
-		self.motion_x =
-		self.motion_y =
-		self.motion_z =
-		self.motion_w =
+		self.motion_x = self.mot_msg.pose.orientation.x
+		self.motion_y = self.mot_msg.pose.orientation.y
+		self.motion_z = self.mot_msg.pose.orientation.z
+		self.motion_w = self.mot_msg.pose.orientation.w
 
 	def kalman_cb(self,msg):
 		self.kalman_msg = msg
