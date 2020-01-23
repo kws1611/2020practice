@@ -88,6 +88,9 @@ class kalman_Filter:
 		self.Kalman_cov_pub = rospy.Publisher("/pose_covariance",PoseWithCovarianceStamped, queue_size=1)
 		self.Kalman_pub = rospy.Publisher("/Kalman_quat",Quaternion, queue_size=1)
 
+        def first_mag_cal(self):
+                self.mag_cal_data = [self.mag_x, self.mag_y, self.mag_z]
+                return self.mag_cal_data
 
 	def get_acc_quat(self):
 		

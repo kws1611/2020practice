@@ -34,50 +34,51 @@ def norm_quat(a_1, a_2, a_3, a_4):
 
 class error:
 
-	def __init__(self):
-		# Subscriber created
-		self.rate = rospy.Rate(100)
-		rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
-                #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
-		rospy.Subscriber("/vrpn_client_node/Quadcopter/pose",PoseStamped,self.motion_cb)
-                self.error_kalman_pub = rospy.Publisher("/kalman_error",PoseStamped, queue_size=1)
-                #self.error_comp_pub = rospy.Publisher("/comp_error",Quaternion, queue_size=1)
-                self.kal_X= 0.0
-                self.kal_Y= 0.0
-                self.kal_z= 0.0
-                self.kal_w= 0.0
-                self.motion_x = 0.0
-                self.motion_Y = 0.0
-                self.motion_Z = 0.0
-                self.motion_W = 0.0
+        def motion_cb(self,msg):
+                self.mot_msg = msg
+                self.motion_x = self.mot_msg.pose.orientation.x
+                self.motion_y = self.mot_msg.pose.orientation.y
+                self.motion_z = self.mot_msg.pose.orientation.z
+                self.motion_w = self.mot_msg.pose.orientation.w
 
-	def motion_cb(self,msg):
-		self.mot_msg = msg
-		self.motion_x = self.mot_msg.pose.orientation.x
-		self.motion_y = self.mot_msg.pose.orientation.y
-		self.motion_z = self.mot_msg.pose.orientation.z
-		self.motion_w = self.mot_msg.pose.orientation.w
-
-	def kalman_cb(self,msg):
-		self.kalman_msg = msg
+        def kalman_cb(self,msg):
+                self.kalman_msg = msg
                 self.kal_x=self.kalman_msg.pose.pose.orientation.x
                 self.kal_y=self.kalman_msg.pose.pose.orientation.y
                 self.kal_z=self.kalman_msg.pose.pose.orientation.z
                 self.kal_w=self.kalman_msg.pose.pose.orientation.w
 
-	def comp_cb(self,msg):
-		self.comp_msg = msg
-		self.comp_x=self.comp_msg.pose.pose.orientation.x
-		self.comp_y=self.comp_msg.pose.pose.orientation.y
-		self.comp_z=self.comp_msg.pose.pose.orientation.z
-		self.comp_w=self.comp_msg.pose.pose.orientation.w
+        def comp_cb(self,msg):
+                self.comp_msg = msg
+                self.comp_x=self.comp_msg.pose.pose.orientation.x
+                self.comp_y=self.comp_msg.pose.pose.orientation.y
+                self.comp_z=self.comp_msg.pose.pose.orientation.z
+                self.comp_w=self.comp_msg.pose.pose.orientation.w
+	def __init__(self):
+		# Subscriber created
+		self.rate = rospy.Rate(100)
+		rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
+                #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
+                rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
+                self.error_kalman_pub = rospy.Publisher("/kalman_error",PoseStamped, queue_size=1)
+                #self.error_comp_pub = rospy.Publisher("/comp_error",Quaternion, queue_size=1)
+                self.kal_x= 0.0
+                self.kal_y= 0.0
+                self.kal_z= 0.0
+                self.kal_w= 0.0
+                self.motion_x = 0.0
+                self.motion_y = 0.0
+                self.motion_z = 0.0
+                self.motion_w = 0.0
+
 
 	def error_cal(self):
+                self.kal_w = 1
                 error_kal_topic = PoseStamped()
                 #error_camp_topic = Quaternion()
 
 		# error calculating
-                self.Kal_error = quat_mult(self.Kal_w,self.Kal_x,self.Kal_y,self.Kal_z,self.motion_w,self.motion_x,self.motion_y,self.motion_z)
+                self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,self.motion_x,self.motion_y,self.motion_z)
                 #self.comp_error = quat_mult(self.comp_w,self.comp_x,self.comp_y,self.comp_z,self.motion_w,self.motion_x,self.motion_y,self.motion_z)
                 error_kal_topic.header.frame_id = "world"
                 error_kal_topic.pose.position.x = 0
@@ -94,7 +95,7 @@ class error:
 		error_comp_topc.w = self.comp_error[0,0]
                 """
 
-		self.error_kal_pub.publish(error_kal_topic)
+                self.error_kalman_pub.publish(error_kal_topic)
                 #self.error_comp_pub.publish(error_comp_topic)
 		self.rate.sleep()
 
