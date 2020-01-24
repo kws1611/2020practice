@@ -83,14 +83,52 @@ class kalman_Filter:
 		self.gyro_y = 0.01
 		self.gyro_z = 0.01
                 self.rate = rospy.Rate(78.5)
+
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
+
+
 		self.Kalman_cov_pub = rospy.Publisher("/pose_covariance",PoseWithCovarianceStamped, queue_size=1)
 		self.Kalman_pub = rospy.Publisher("/Kalman_quat",Quaternion, queue_size=1)
 
         def first_mag_cal(self):
-                self.mag_cal_data = [self.mag_x, self.mag_y, self.mag_z]
-                return self.mag_cal_data
+                self.mag_cal_x = 0
+                self.mag_cal_y = 0
+                self.mag_cal_z = 0
+                self.gyro_cal_x = 0
+                self.gyro_cal_y = 0
+                self.gyro_cal_z = 0
+                self.acc_cal_x = 0
+                self.acc_cal_y = 0
+                self.acc_cal_z = 0
+                self.cal_count = 0
+                while self.mag_x == 0.01:
+                        time.sleep(0.1)
+
+
+                if self.mag_x != 0.01:
+                        self.calibration_time = time.time() + 1.5
+                        while time.time() <= self.calibration_time:
+                                self.mag_cal_x += self.mag_x
+                                self.mag_cal_y += self.mag_y
+                                self.mag_cal_z += self.mag_z
+                                self.gyro_cal_x += self.gyro_x
+                                self.gyro_cal_y += self.gyro_y
+                                self.gyro_cal_z += self.gyro_z
+                                self.acc_cal_x += self.acc_x
+                                self.acc_cal_y += self.acc_y
+                                self.acc_cal_z += self.acc_z
+                                self.cal_count += 1
+
+                        self.mag_cal_x /= self.cal_count
+                        self.mag_cal_y /= self.cal_count
+                        self.mag_cal_z /= self.cal_count
+                        self.gyro_cal_x /= self.cal_count
+                        self.gyro_cal_y /= self.cal_count
+                        self.gyro_cal_z /= self.cal_count
+                        self.acc_cal_x /= self.cal_count
+                        self.acc_cal_y /= self.cal_count
+                        self.acc_cal_z /= self.cal_count
 
 	def get_acc_quat(self):
 		
@@ -115,7 +153,29 @@ class kalman_Filter:
 			self.q2_mag = 0
 			self.q3_mag = math.sqrt(self.gamma - lx * math.sqrt(self.gamma))/ math.sqrt(2 * self.gamma) 
 			self.q_mag= norm_quat(self.q0_mag, self.q1_mag, self.q2_mag, self.q3_mag)
-	
+
+        def get_mag_acc_calibration(self):
+
+                self.ax_cal = self.acc_cal_x / math.sqrt(self.acc_cal_x**2 +self.acc_cal_y**2 + self.acc_cal_z**2)
+                self.ay_cal = self.acc_cal_y / math.sqrt(self.acc_cal_x**2 +self.acc_cal_y**2 + self.acc_cal_z**2)
+                self.az_cal = self.acc_cal_z / math.sqrt(self.acc_cal_x**2 +self.acc_cal_y**2 + self.acc_cal_z**2)
+                self.q_acc_cal = np.matrix([math.sqrt(0.5*(self.az_cal + 1)), -self.ay_cal/(2*math.sqrt(0.5*(self.az_cal+1))), self.ax_cal/(2*math.sqrt(0.5*(self.az_cal+1))), 0])
+
+                self.mag_cal_x, self.mag_cal_y, self.mag_cal_z = normalization(self.mag_cal_x, self.mag_cal_y, self.mag_cal_z)
+                lx_cal, ly_cal, lz_cal = rotateVectorQuaternion(self.mag_cal_x, self.mag_cal_y, self.mag_cal_z, self.q_acc_cal[0,0], self.q_acc_cal[0,1], self.q_acc_cal[0,2], self.q_acc_cal[0,3])
+                self.gamma_cal = lx_cal ** 2 + ly_cal ** 2
+                if lx_cal >= 0:
+                        self.q0_mag_cal = math.sqrt(self.gamma_cal + lx_cal * math.sqrt(self.gamma_cal))/ math.sqrt(2 * self.gamma_cal)
+                        self.q1_mag_cal = 0
+                        self.q2_mag_cal = 0
+                        self.q3_mag_cal = ly_cal / math.sqrt(2 * (self.gamma_cal + lx_cal * math.sqrt(self.gamma_cal)))
+                        self.q_mag_cal= norm_quat(self.q0_mag_cal, self.q1_mag_cal, self.q2_mag_cal, self.q3_mag_cal)
+                if lx_cal < 0:
+                        self.q0_mag_cal = ly_cal / math.sqrt(2 * (self.gamma_cal - lx_cal * math.sqrt(self.gamma_cal)))
+                        self.q1_mag_cal = 0
+                        self.q2_mag_cal = 0
+                        self.q3_mag_cal = math.sqrt(self.gamma_cal - lx_cal * math.sqrt(self.gamma_cal))/ math.sqrt(2 * self.gamma_cal)
+                        self.q_mag_cal= norm_quat(self.q0_mag_cal, self.q1_mag_cal, self.q2_mag_cal, self.q3_mag_cal)
 
 	def kalman(self):
 		pose_topic = PoseWithCovarianceStamped()
@@ -123,8 +183,8 @@ class kalman_Filter:
 				
 		self.get_acc_quat()
 		self.get_mag_quat()
-
-		self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0])
+                self.q_mag_calibrating = quat_mult(self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0],self.q_mag_cal[0,0],-self.q_mag_cal[1,0],-self.q_mag_cal[2,0],-self.q_mag_cal[3,0])
+                self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag_calibrating[0,0],self.q_mag_calibrating[1,0],self.q_mag_calibrating[2,0],-self.q_mag_calibrating[3,0])
 			
 		self.A = np.identity(4) + self.dt*float(0.5)*np.matrix([[0 ,-self.gyro_x,-self.gyro_y,-self.gyro_z], [self.gyro_x, 0 ,self.gyro_z, -self.gyro_y], [self.gyro_y, -self.gyro_z ,0, self.gyro_x], [self.gyro_z, self.gyro_y ,-self.gyro_x, 0 ]])
 		# Kalman Filter
@@ -164,7 +224,8 @@ if __name__ == "__main__":
 		rospy.loginfo("Kalman filter start!")
 	
 		Filtering = kalman_Filter()
-
+                Filtering.first_mag_cal()
+                Filtering.get_mag_acc_calibration()
 		while not rospy.is_shutdown():
 
 			 
