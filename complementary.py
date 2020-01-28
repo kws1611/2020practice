@@ -29,6 +29,8 @@ def normalizeQuaternion(q0, q1, q2, q3):
 
 def normalization(v1, v2, v3):
 	norm = sqrt(v1 ** 2 + v2 ** 2 + v3 ** 2)
+	if norm == 0 :
+		norm = 1 
 	v1 = v1 / norm
 	v2 = v2 / norm
  	v3=  v3 / norm
@@ -43,19 +45,17 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 class complement_Filter:
 	def __init__(self):
 		self.pub=rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
-		self.magpub=rospy.Publisher("/magquat", Imu, queue_size =1)
-		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
-		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0, 0, 0
-		self.Alpha, self.Beta, self.Gyro = 0.8, 0.8, 0.5
-		self.rate = rospy.Rate(100)
-		self.Alpha, self.Beta = 0.8, 0.8
+		self.Alpha, self.Beta, self.Gyro = 0.8, 0, 0.5
 		self.q0, self.q1, self.q2, self.q3 = 1, 0, 0, 0
 		self.a_x, self.a_y, self.a_z = 0, 0, 1
 		self.g_x, self.g_y, self.g_z = 0, 0, 0
 		self.m_x, self.m_y, self.m_z = 0, 0, 0
 		#self.t_prev = time.time()
-		self.Calibration(100)
+		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
+		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
+		rospy.sleep(0.5)
+		self.rate = rospy.Rate(100)
 
 	def calcDT(self):
 		t_now = time.time()
@@ -66,20 +66,20 @@ class complement_Filter:
 		self.a_x = msg.linear_acceleration.x
 		self.a_y = msg.linear_acceleration.y
 		self.a_z = msg.linear_acceleration.z
-		self.g_x = msg.angular_velocity.x
-		self.g_y = msg.angular_velocity.y
-		self.g_z = msg.angular_velocity.z
+		self.g_x = -msg.angular_velocity.x
+		self.g_y = -msg.angular_velocity.y
+		self.g_z = -msg.angular_velocity.z
 		
 	def mag_raw_data(self, msg):
 		self.m_x = msg.magnetic_field.x
 		self.m_y = msg.magnetic_field.y
 		self.m_z = msg.magnetic_field.z
 
-	def Calibration():
+	def Calibration(self):
 		BiasIs = True
-		self.g_xBias = self.g_xBias + (g_x - self.g_xBias) * self.Gyro
-		self.g_yBias = self.g_yBias + (g_y - self.g_yBias) * self.Gyro
-		self.g_zBias = self.g_zBias + (g_z - self.g_zBias) * self.Gyro
+		self.g_xBias = self.g_xBias + (self.g_x - self.g_xBias) * self.Gyro
+		self.g_yBias = self.g_yBias + (self.g_y - self.g_yBias) * self.Gyro
+		self.g_zBias = self.g_zBias + (self.g_z - self.g_zBias) * self.Gyro
 
 	def getGyroCali(self, sum_x, sum_y, sum_z, num, goal):
 		sum_x = sum_x + self.g_x
@@ -132,10 +132,10 @@ class complement_Filter:
 		self.dt = 0.01
 		self.getAccelGyro()
 		q0_gyro,q1_gyro,q2_gyro,q3_gyro = quaternionMultiplication(0, self.g_x, self.g_y, self.g_z, self.q0, self.q1, self.q2, self.q3)
-		q0_gyro = self.q0 - 0.5 * q0_gyro * self.dt 
-		q1_gyro = self.q1 - 0.5 * q1_gyro * self.dt
-		q2_gyro = self.q2 - 0.5 * q2_gyro * self.dt
-		q3_gyro = self.q3 - 0.5 * q3_gyro * self.dt
+		q0_gyro = self.q0 + 0.5 * q0_gyro * self.dt * pi / 180
+		q1_gyro = self.q1 + 0.5 * q1_gyro * self.dt * pi / 180
+		q2_gyro = self.q2 + 0.5 * q2_gyro * self.dt * pi / 180
+		q3_gyro = self.q3 + 0.5 * q3_gyro * self.dt * pi / 180
 		q0_gyro, q1_gyro, q2_gyro, q3_gyro = normalizeQuaternion(q0_gyro, q1_gyro, q2_gyro, q3_gyro)
 		return q0_gyro, q1_gyro, q2_gyro, q3_gyro
 		
@@ -171,7 +171,7 @@ class complement_Filter:
 		q2_mag = 0
 		q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
 		q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
-		mag_topic = PoseWithCovarianceStamped()
+
 		return q0_mag, q1_mag, q2_mag, q3_mag
 
 	def steadyState(self):
@@ -182,8 +182,8 @@ class complement_Filter:
 		
 	def imu_Mag_Complementary(self):
 		while not rospy.is_shutdown():
-			if self.steadyState() == True:
-				self.Calibration()
+			#if self.steadyState() == True:
+			#	self.Calibration()
 			q0_gyro, q1_gyro, q2_gyro, q3_gyro = self.getPrediction()
 			q0_acc, q1_acc, q2_acc, q3_acc = self.acc_Correction()
 			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(q0_gyro, q1_gyro, q2_gyro, q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
@@ -191,7 +191,7 @@ class complement_Filter:
 			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, q0_mag, q1_mag, q2_mag, q3_mag)
 			quat_topic = PoseWithCovarianceStamped()
 			quat_topic.header.stamp = rospy.Time.now()
-			quat_topic.header.frame_id = "map"
+			quat_topic.header.frame_id = "world"
 			quat_topic.pose.pose.position.x = 0
 			quat_topic.pose.pose.position.y = 0
 			quat_topic.pose.pose.position.z = 0
