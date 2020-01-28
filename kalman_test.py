@@ -38,9 +38,9 @@ def normalization(v1, v2, v3):
 	return v1, v2, v3
 
 def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
-	vx = (q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * x + 2 * (q1 * q2 - q0 * q3) * y + 2 * (q1 * q3 + q0 * q2) * z
-	vy = 2 * (q1 * q2 + q0 * q3) * x + (q0 * q0 - q1 * q1 + q2 * q2 - q3 * q3) * y + 2 * (q2 * q3 - q0 * q1) * z
-	vz = 2 * (q1 * q3 - q0 * q2) * x + 2 * (q2 * q3 + q0 * q1) * y + (q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) * z
+        vx = ((q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * x + 2 * (q1 * q2 - q0 * q3) * y + 2 * (q1 * q3 + q0 * q2) * z)
+        vy = (2 * (q1 * q2 + q0 * q3) * x + (q0 * q0 - q1 * q1 + q2 * q2 - q3 * q3) * y + 2 * (q2 * q3 - q0 * q1) * z)
+        vz = (2 * (q1 * q3 - q0 * q2) * x + 2 * (q2 * q3 + q0 * q1) * y + (q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) * z)
 	return vx, vy, vz
 
 class kalman_Filter:
@@ -53,13 +53,13 @@ class kalman_Filter:
 
                 self.gyro_x = float(self.imu_data.angular_velocity.x)
                 self.gyro_y = float(self.imu_data.angular_velocity.y)
-		self.gyro_z = float(self.imu_data.angular_velocity.z)
+                self.gyro_z = float(self.imu_data.angular_velocity.z)
 
 	def mag_raw_data(self, msg):
 		self.mag_data = msg
                 self.mag_x = float(self.mag_data.magnetic_field.x)
                 self.mag_y = float(self.mag_data.magnetic_field.y)
-		self.mag_z = float(self.mag_data.magnetic_field.z)
+                self.mag_z = float(self.mag_data.magnetic_field.z)
 
 	def __init__(self):
 		self.kalman_topic = Quaternion()
@@ -183,19 +183,23 @@ class kalman_Filter:
 				
 		self.get_acc_quat()
 		self.get_mag_quat()
-                self.q_mag_calibrating = quat_mult(self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0],self.q_mag_cal[0,0],-self.q_mag_cal[1,0],-self.q_mag_cal[2,0],-self.q_mag_cal[3,0])
-                self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag_calibrating[0,0],self.q_mag_calibrating[1,0],self.q_mag_calibrating[2,0],-self.q_mag_calibrating[3,0])
-			
-		self.A = np.identity(4) + self.dt*float(0.5)*np.matrix([[0 ,-self.gyro_x,-self.gyro_y,-self.gyro_z], [self.gyro_x, 0 ,self.gyro_z, -self.gyro_y], [self.gyro_y, -self.gyro_z ,0, self.gyro_x], [self.gyro_z, self.gyro_y ,-self.gyro_x, 0 ]])
+                #self.q_mag_calibrating = quat_mult(self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0],self.q_mag_cal[0,0],-self.q_mag_cal[1,0],-self.q_mag_cal[2,0],-self.q_mag_cal[3,0])
+                #self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag_calibrating[0,0],self.q_mag_calibrating[1,0],self.q_mag_calibrating[2,0],self.q_mag_calibrating[3,0])
+                #self.Z = quat_mult(self.q_acc[0,0],self.sq_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0])
+                self.q_mag_calibrating = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0])
+                self.Z = quat_mult(self.q_mag_calibrating[0,0],self.q_mag_calibrating[1,0],self.q_mag_calibrating[2,0],self.q_mag_calibrating[3,0],self.q_mag_cal[0,0],-self.q_mag_cal[1,0],-self.q_mag_cal[2,0],-self.q_mag_cal[3,0])
+                self.A = np.identity(4) + self.dt*float(0.5)*np.matrix([[0 ,-self.gyro_x,-self.gyro_y,-self.gyro_z], [self.gyro_x, 0 ,self.gyro_z, -self.gyro_y], [self.gyro_y, -self.gyro_z ,0, self.gyro_x], [self.gyro_z, self.gyro_y ,-self.gyro_x, 0 ]])
 		# Kalman Filter
-		
+                """
 		self.Xp = self.A*self.X
 		self.Pp = self.A*self.P*self.A.T +self.Q
 		self.K = self.Pp*self.H.T*lin.inv(self.H*self.Pp*self.H.T + self.R)
 		self.X = self.Xp + self.K*(self.Z - self.H*self.Xp)
 		self.X = norm_quat(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0])
 		self.P = self.Pp - self.K*self.H*self.Pp
-
+                """
+                self.X = self.q_acc.T
+                #self.X = self.A*self.X
 		kalman_topic.x = self.X[0,0]
 		kalman_topic.y = self.X[1,0]
 		kalman_topic.z = self.X[2,0]
