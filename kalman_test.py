@@ -51,15 +51,15 @@ class kalman_Filter:
                 self.acc_y = float(self.imu_data.linear_acceleration.x)
                 self.acc_z = float(self.imu_data.linear_acceleration.z)
 
-                self.gyro_x = float(self.imu_data.angular_velocity.x)
-                self.gyro_y = float(self.imu_data.angular_velocity.y)
+                self.gyro_x = float(self.imu_data.angular_velocity.y)
+                self.gyro_y = -float(self.imu_data.angular_velocity.x)
                 self.gyro_z = float(self.imu_data.angular_velocity.z)
 
 	def mag_raw_data(self, msg):
 		self.mag_data = msg
                 self.mag_x = float(self.mag_data.magnetic_field.x)
-                self.mag_y = float(self.mag_data.magnetic_field.y)
-                self.mag_z = float(self.mag_data.magnetic_field.z)
+                self.mag_y = -float(self.mag_data.magnetic_field.y)
+                self.mag_z = -float(self.mag_data.magnetic_field.z)
 
 	def __init__(self):
 		self.kalman_topic = Quaternion()
@@ -87,7 +87,6 @@ class kalman_Filter:
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
 
-
 		self.Kalman_cov_pub = rospy.Publisher("/pose_covariance",PoseWithCovarianceStamped, queue_size=1)
 		self.Kalman_pub = rospy.Publisher("/Kalman_quat",Quaternion, queue_size=1)
 
@@ -104,7 +103,6 @@ class kalman_Filter:
                 self.cal_count = 0
                 while self.mag_x == 0.01:
                         time.sleep(0.1)
-
 
                 if self.mag_x != 0.01:
                         self.calibration_time = time.time() + 1.5
@@ -199,7 +197,7 @@ class kalman_Filter:
 		self.P = self.Pp - self.K*self.H*self.Pp
 
 
-                #self.X = self.A*self.X
+                #self.X = self.q_acc.T
 		kalman_topic.x = self.X[0,0]
 		kalman_topic.y = self.X[1,0]
 		kalman_topic.z = self.X[2,0]
