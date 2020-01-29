@@ -38,7 +38,7 @@ def normalization(v1, v2, v3):
 	return v1, v2, v3
 
 def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
-        vx = ((q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * x + 2 * (q1 * q2 - q0 * q3) * y + 2 * (q1 * q3 + q0 * q2) * z)
+        vx = ((q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * (x) + 2 * (q1 * q2 - q0 * q3) * y + 2 * (q1 * q3 + q0 * q2) * z)
         vy = (2 * (q1 * q2 + q0 * q3) * x + (q0 * q0 - q1 * q1 + q2 * q2 - q3 * q3) * y + 2 * (q2 * q3 - q0 * q1) * z)
         vz = (2 * (q1 * q3 - q0 * q2) * x + 2 * (q2 * q3 + q0 * q1) * y + (q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) * z)
 	return vx, vy, vz
@@ -47,19 +47,28 @@ class kalman_Filter:
 
 	def imu_raw_data(self, msg):
 		self.imu_data = msg
+
                 self.acc_x = -float(self.imu_data.linear_acceleration.y)
                 self.acc_y = float(self.imu_data.linear_acceleration.x)
                 self.acc_z = float(self.imu_data.linear_acceleration.z)
 
-                self.gyro_x = float(self.imu_data.angular_velocity.y)
-                self.gyro_y = -float(self.imu_data.angular_velocity.x)
+                self.gyro_x = -float(self.imu_data.angular_velocity.y)
+                self.gyro_y = float(self.imu_data.angular_velocity.x)
                 self.gyro_z = float(self.imu_data.angular_velocity.z)
+                """
+                self.acc_x = float(self.imu_data.linear_acceleration.x)
+                self.acc_y = float(self.imu_data.linear_acceleration.y)
+                self.acc_z = float(self.imu_data.linear_acceleration.z)
 
+                self.gyro_x = float(self.imu_data.angular_velocity.x)
+                self.gyro_y = float(self.imu_data.angular_velocity.y)
+                self.gyro_z = float(self.imu_data.angular_velocity.z)
+                """
 	def mag_raw_data(self, msg):
 		self.mag_data = msg
-                self.mag_x = float(self.mag_data.magnetic_field.x)
-                self.mag_y = -float(self.mag_data.magnetic_field.y)
-                self.mag_z = -float(self.mag_data.magnetic_field.z)
+                self.mag_x = float(self.mag_data.magnetic_field.x +612.044986264)
+                self.mag_y = float(self.mag_data.magnetic_field.y - 193.069651442)
+                self.mag_z = float(self.mag_data.magnetic_field.z + 299.207515019)
 
 	def __init__(self):
 		self.kalman_topic = Quaternion()
@@ -69,7 +78,7 @@ class kalman_Filter:
 		self.H = np.identity(4)
                 self.Q = np.matrix([[0.0299009184657**2, 0, 0, 0],[0, 0.0315001603291**2, 0, 0],[0, 0, 0.0751542253079**2, 0],[0, 0, 0, 0.0964859324556**2]])
                 #self.Q = 10**(-4)*np.matrix('0.64 0 0 0; 0 0.64 0 0 ; 0 0 0.169 0; 0 0 0 0.64 ')
-		#		self.Q = np.matrix('0 -0.4 -0.65 -0.4; 0.4 0 0.4 -0.65; 0.65 -0.4 0 0.4; 0.4 0.65 -0.4 0')
+                #self.Q = np.matrix('0 -0.4 -0.65 -0.4; 0.4 0 0.4 -0.65; 0.65 -0.4 0 0.4; 0.4 0.65 -0.4 0')
                 self.R =np.matrix([[0.0209789550647**2, 0, 0, 0],[0, 0.00541388117932**2, 0, 0], [0, 0, 0.0102877460488**2, 0], [0, 0, 0, 0.0161420424737**2]])
                 #self.R =np.matrix([[0.0209789550647**2, 0, 0, 0],[0, 0.00541388117932**2, 0, 0], [0, 0, 0.0102877460488**2, 0], [0, 0, 0, 1]])
 		# Subscriber created
@@ -134,11 +143,13 @@ class kalman_Filter:
 		self.ay = self.acc_y / math.sqrt(self.acc_x**2 +self.acc_y**2 + self.acc_z**2)
 		self.az = self.acc_z / math.sqrt(self.acc_x**2 +self.acc_y**2 + self.acc_z**2)
 		self.q_acc = np.matrix([math.sqrt(0.5*(self.az + 1)), -self.ay/(2*math.sqrt(0.5*(self.az+1))), self.ax/(2*math.sqrt(0.5*(self.az+1))), 0])
+                #self.q_acc = norm_quat(self.q_acc[0,0], self.q_acc[0,1], self.q_acc[0,2], self.q_acc[0,3])
+                #self.q_acc = self.q_acc.T
 	
 	def get_mag_quat(self):
-		self.mag_x, self.mag_y, self.mag_z = normalization(self.mag_x, self.mag_y, self.mag_z)
+                #self.mag_x, self.mag_y, self.mag_z = normalization(self.mag_x, self.mag_y, self.mag_z)
 		lx, ly, lz = rotateVectorQuaternion(self.mag_x, self.mag_y, self.mag_z, self.q_acc[0,0], self.q_acc[0,1], self.q_acc[0,2], self.q_acc[0,3])
-		self.gamma = lx ** 2 + ly ** 2
+                self.gamma = lx**2 + ly**2
 		if lx >= 0:
 			self.q0_mag = math.sqrt(self.gamma + lx * math.sqrt(self.gamma))/ math.sqrt(2 * self.gamma)
 			self.q1_mag = 0
@@ -183,7 +194,7 @@ class kalman_Filter:
 		self.get_mag_quat()
                 #self.q_mag_calibrating = quat_mult(self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0],self.q_mag_cal[0,0],-self.q_mag_cal[1,0],-self.q_mag_cal[2,0],-self.q_mag_cal[3,0])
                 #self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag_calibrating[0,0],self.q_mag_calibrating[1,0],self.q_mag_calibrating[2,0],self.q_mag_calibrating[3,0])
-                #self.Z = quat_mult(self.q_acc[0,0],self.sq_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0])
+                #self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0])
                 self.q_mag_calibrating = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0])
                 self.Z = quat_mult(self.q_mag_calibrating[0,0],self.q_mag_calibrating[1,0],self.q_mag_calibrating[2,0],self.q_mag_calibrating[3,0],self.q_mag_cal[0,0],-self.q_mag_cal[1,0],-self.q_mag_cal[2,0],-self.q_mag_cal[3,0])
                 self.A = np.identity(4) + self.dt*float(0.5)*np.matrix([[0 ,-self.gyro_x,-self.gyro_y,-self.gyro_z], [self.gyro_x, 0 ,self.gyro_z, -self.gyro_y], [self.gyro_y, -self.gyro_z ,0, self.gyro_x], [self.gyro_z, self.gyro_y ,-self.gyro_x, 0 ]])
@@ -197,11 +208,11 @@ class kalman_Filter:
 		self.P = self.Pp - self.K*self.H*self.Pp
 
 
-                #self.X = self.q_acc.T
-		kalman_topic.x = self.X[0,0]
-		kalman_topic.y = self.X[1,0]
-		kalman_topic.z = self.X[2,0]
-		kalman_topic.w = self.X[3,0]
+                #self.X = self.q_mag
+                kalman_topic.x = self.X[1,0]
+                kalman_topic.y = self.X[2,0]
+                kalman_topic.z = self.X[3,0]
+                kalman_topic.w = self.X[0,0]
 		pose_topic.header.stamp = rospy.Time.now()
                 pose_topic.header.frame_id = "world"
 		pose_topic.pose.pose.position.x = 0
