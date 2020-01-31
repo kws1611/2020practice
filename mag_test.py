@@ -123,7 +123,15 @@ class kalman_Filter:
                         time.sleep(0.1)
 
                 if self.mag_x != 0.01:
+<<<<<<< HEAD
                         self.calibration_time = time.time() + 15
+=======
+<<<<<<< HEAD
+                        self.calibration_time = time.time() + 35
+=======
+                        self.calibration_time = time.time() + 60
+>>>>>>> acc96954b861c0ca950f750ab92992f25d8fbba3
+>>>>>>> d72f4ced7bdfff6dd07c59e4c5e82f9dd546199e
                         while time.time() <= self.calibration_time:
                                 self.mag_cal_x += self.mag_x
                                 self.mag_cal_y += self.mag_y
