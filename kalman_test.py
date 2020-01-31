@@ -69,15 +69,15 @@ class kalman_Filter:
                 self.mag_bias_x = -567.687070742
                 self.mag_bias_y = 211.888161058
                 self.mag_bias_z = -335.368569712
-                """
-                self.mag_x = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_bias_y) / math.sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
-                self.mag_y = (self.mag_data.magnetic_field.x -self.mag_bias_x) * self.mag_bias_x/math.sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
-                self.mag_z = -(self.mag_data.magnetic_field.z -self.mag_bias_z) * self.mag_bias_z/math.sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
-                """
-                self.mag_x = (self.mag_data.magnetic_field.x -self.mag_bias_x) * self.mag_bias_x/math.sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
-                self.mag_y = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_bias_y) / math.sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
-                self.mag_z = (self.mag_data.magnetic_field.z -self.mag_bias_z) * self.mag_bias_z/math.sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
 
+                self.mag_x = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_y*3)
+                self.mag_y = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_x*3)
+                self.mag_z = -(self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_z*3)
+                """
+                self.mag_x = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_x*3)
+                self.mag_y = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_y*3)
+                self.mag_z = (self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_z*3)
+                """
 	def __init__(self):
 		self.kalman_topic = Quaternion()
 		self.X = np.matrix('1;0;0;0')
