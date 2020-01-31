@@ -97,7 +97,7 @@ class kalman_Filter:
 		self.mag_z = 0.01
 		self.acc_x = 0.01
 		self.acc_y = 0.01
-		self.acc_z = 0.01
+                self.acc_z = 0.01float64[36] covariance
 		self.gyro_x = 0.01
 		self.gyro_y = 0.01
 		self.gyro_z = 0.01
@@ -180,7 +180,7 @@ class kalman_Filter:
 
 	def get_mag_quat(self):
                 #self.mag_x, self.mag_y, self.mag_z = normalization(self.mag_x, self.mag_y, self.mag_z)
-		lx, ly, lz = rotateVectorQuaternion(self.mag_x, self.mag_y, self.mag_z, self.q_acc[0,0], self.q_acc[0,1], self.q_acc[0,2], self.q_acc[0,3])
+                lx, ly, lz = rotateVectorQuaternion(self.mag_x, self.mag_y, self.mag_z, self.q_acc[0,0], -self.q_acc[0,1], -self.q_acc[0,2], -self.q_acc[0,3])
                 self.gamma = lx**2 + ly**2
 		if lx >= 0:
 			self.q0_mag = math.sqrt(self.gamma + lx * math.sqrt(self.gamma))/ math.sqrt(2 * self.gamma)

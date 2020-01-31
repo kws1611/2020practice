@@ -72,9 +72,12 @@ class complement_Filter:
 		self.g_z = msg.angular_velocity.z
 		
 	def mag_raw_data(self, msg):
-		self.m_x = msg.magnetic_field.x
-		self.m_y = msg.magnetic_field.y
-		self.m_z = msg.magnetic_field.z
+                self.mag_bias_x = -528.2578125
+                self.mag_bias_y = 182.719471154
+                self.mag_bias_z = -269.374639423
+                self.m_x = (msg.magnetic_field.x - self.mag_bias_x)*self.mag_bias_x/sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
+                self.m_y = (msg.magnetic_field.y - self.mag_bias_y)*self.mag_bias_y/sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
+                self.m_z = (msg.magnetic_field.z - self.mag_bias_z)*self.mag_bias_z/sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
 
 	def Calibration(self):
 		BiasIs = True
@@ -124,9 +127,15 @@ class complement_Filter:
 		self.g_z = self.g_z - self.g_zBias
 
 	def getMagnetic(self):
+                """
 		self.m_x = self.m_x - self.m_xBias
 		self.m_y = self.m_y - self.m_yBias
 		self.m_z = self.m_z - self.m_zBias
+                """
+
+                self.m_x = self.m_x
+                self.m_y = self.m_y
+                self.m_z = self.m_z
 
 	def getPrediction(self):
 		self.calcDT()
@@ -167,21 +176,33 @@ class complement_Filter:
 		beta = self.Beta
 		lx, ly, lz = rotateVectorQuaternion(m_x, m_y, m_z, self.q0, -self.q1, -self.q2, -self.q3)
 		gamma = lx ** 2 + ly ** 2
-		q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
-		q1_mag = 0
-		q2_mag = 0
-		q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
-		q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
+                if lx >= 0 :
+                        q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
+                        q1_mag = 0
+                        q2_mag = 0
+                        q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
+                        q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
+
+                else :
+                        q0_mag = beta * sqrt(gamma - lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
+                        q1_mag = 0
+                        q2_mag = 0
+                        q3_mag = beta * ly / sqrt(2 * (gamma - lx * sqrt(gamma)))
+                        q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
 		return q0_mag, q1_mag, q2_mag, q3_mag
 
 	def accel_predict(self):
 		self.getAccelGyro()
 		a_x, a_y, a_z = self.a_x, self.a_y, self.a_z
+                a_x = a_x / sqrt(a_x**2 + a_y**2 + a_z**2)
+                a_y = a_y / sqrt(a_x**2 + a_y**2 + a_z**2)
+                a_z = a_z / sqrt(a_x**2 + a_y**2 + a_z**2)
 		q0_acc = sqrt(0.5 *(a_z + 1))
 		q1_acc = a_y / sqrt(2 * (a_z + 1))
 		q2_acc = - a_x / sqrt(2 * (a_z + 1))
 		q3_acc = 0
 		q0_acc, q1_acc, q2_acc, q3_acc = normalizeQuaternion(q0_acc, q1_acc, q2_acc, q3_acc)
+
 		return q0_acc, q1_acc, q2_acc, q3_acc
 
 	def mag_predict(self):
