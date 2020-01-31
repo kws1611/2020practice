@@ -86,7 +86,11 @@ class error:
 
         def error_rpy(self,q0,q1,q2,q3):
                 roll = math.atan2(2*(q0*q1 + q2*q3),(1-2*(q1**2 + q2**2)))
-                pitch = math.asin(2*(q0*q2 - q3*q1))
+                if 2*(q0*q2 - q3*q1) > 1 or 2*(q0*q2 - q3*q1) < -1 :
+                        pitch = 10
+
+                else :
+                        pitch = math.asin(2*(q0*q2 - q3*q1))
                 yaw = math.atan2(2*(q0*q3 + q1*q2),1-2*(q2**2 + q3**2))
 
                 return roll, pitch, yaw

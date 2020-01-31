@@ -97,7 +97,7 @@ class kalman_Filter:
 		self.mag_z = 0.01
 		self.acc_x = 0.01
 		self.acc_y = 0.01
-		self.acc_z = 0.01
+		self.acc_z = 0.01float64[36] covariance
 		self.gyro_x = 0.01
 		self.gyro_y = 0.01
 		self.gyro_z = 0.01
