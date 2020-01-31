@@ -178,8 +178,8 @@ class complement_Filter:
 		self.getAccelGyro()
 		a_x, a_y, a_z = self.a_x, self.a_y, self.a_z
 		q0_acc = sqrt(0.5 *(a_z + 1))
-		q1_acc = a_y / sqrt(2 * (a_z + 1))
-		q2_acc = - a_x / sqrt(2 * (a_z + 1))
+		q1_acc = - a_y / sqrt(2 * (a_z + 1))
+		q2_acc = a_x / sqrt(2 * (a_z + 1))
 		q3_acc = 0
 		q0_acc, q1_acc, q2_acc, q3_acc = normalizeQuaternion(q0_acc, q1_acc, q2_acc, q3_acc)
 		return q0_acc, q1_acc, q2_acc, q3_acc
@@ -193,12 +193,12 @@ class complement_Filter:
 			q0_mag = sqrt((gamma + lx * sqrt(gamma))/ (2 * gamma))
 			q1_mag = 0
 			q2_mag = 0
-			q3_mag = - ly / sqrt( 2 * (gamma + lx * sqrt(gamma)))
+			q3_mag = ly / sqrt( 2 * (gamma + lx * sqrt(gamma)))
 		else:
 			q0_mag = ly / sqrt( 2 * (gamma - lx * sqrt(gamma)))
 			q1_mag = 0
 			q2_mag = 0
-			q3_mag = - sqrt((gamma - lx * sqrt(gamma))/ (2 * gamma))
+			q3_mag = sqrt((gamma - lx * sqrt(gamma))/ (2 * gamma))
 		q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
 		return q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag
 
@@ -235,6 +235,7 @@ class complement_Filter:
 			#quat_topic.pose.pose.orientation.z = - self.q3
 			#quat_topic.pose.pose.orientation.w = self.q0
 			self.pub.publish(quat_topic)
+			self.rate.sleep()
 
 	def acc_Mag_Complementary(self):
 		while not rospy.is_shutdown():
@@ -251,6 +252,7 @@ class complement_Filter:
 			quat_topic.pose.pose.orientation.z = - q3
 			quat_topic.pose.pose.orientation.w = q0
 			self.pub.publish(quat_topic)
+			self.rate.sleep()
 
 
 if __name__=="__main__":
