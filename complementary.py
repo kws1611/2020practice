@@ -46,7 +46,7 @@ class complement_Filter:
 	def __init__(self):
 		self.pub = rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0., 0., 0.
-		self.m_xBias, self.m_yBias, self.m_zBias = -355.754807692, 389.633112981, -56.0370192308
+		self.m_xBias, self.m_yBias, self.m_zBias = -651.379996566, 256.11165
 		self.m_xScale, self.m_yScale, self.m_zScale = 
 		self.Alpha, self.Beta, self.Gyro = 0., 0., 0.5
 		self.q0, self.q1, self.q2, self.q3 = 1., 0., 0., 0.
@@ -64,8 +64,8 @@ class complement_Filter:
 		self.t_prev = t_now
 
 	def imu_raw_data(self, msg):
-		self.a_x = - msg.linear_acceleration.x
-		self.a_y = - msg.linear_acceleration.y
+		self.a_x = msg.linear_acceleration.x
+		self.a_y = msg.linear_acceleration.y
 		self.a_z = msg.linear_acceleration.z
 		self.g_x = msg.angular_velocity.x
 		self.g_y = msg.angular_velocity.y
@@ -75,7 +75,6 @@ class complement_Filter:
 		self.m_x = self.mag_data.magnetic_field.x
 		self.m_y = self.mag_data.magnetic_field.y
 		self.m_z = self.mag_data.magnetic_field.z
-
 
 	def Calibration(self):
 		BiasIs = True
@@ -168,33 +167,31 @@ class complement_Filter:
 		beta = self.Beta
 		lx, ly, lz = rotateVectorQuaternion(m_x, m_y, m_z, self.q0, -self.q1, -self.q2, -self.q3)
 		gamma = lx ** 2 + ly ** 2
-                if lx >= 0 :
-                        q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
-                        q1_mag = 0
-                        q2_mag = 0
-                        q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
-                        q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
-
-                else :
-                        q0_mag = beta * sqrt(gamma - lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
-                        q1_mag = 0
-                        q2_mag = 0
-                        q3_mag = beta * ly / sqrt(2 * (gamma - lx * sqrt(gamma)))
-                        q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
+		if lx >= 0 :
+			q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
+			q1_mag = 0
+			q2_mag = 0
+			q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
+			q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
+		else :
+			q0_mag = beta * sqrt(gamma - lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
+			q1_mag = 0
+			q2_mag = 0
+			q3_mag = beta * ly / sqrt(2 * (gamma - lx * sqrt(gamma)))
+			q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
 		return q0_mag, q1_mag, q2_mag, q3_mag
 
 	def accel_predict(self):
 		self.getAccelGyro()
 		a_x, a_y, a_z = self.a_x, self.a_y, self.a_z
-                a_x = a_x / sqrt(a_x**2 + a_y**2 + a_z**2)
-                a_y = a_y / sqrt(a_x**2 + a_y**2 + a_z**2)
-                a_z = a_z / sqrt(a_x**2 + a_y**2 + a_z**2)
+		a_x = a_x / sqrt(a_x**2 + a_y**2 + a_z**2)
+		a_y = a_y / sqrt(a_x**2 + a_y**2 + a_z**2)
+		a_z = a_z / sqrt(a_x**2 + a_y**2 + a_z**2)
 		q0_acc = sqrt(0.5 *(a_z + 1))
 		q1_acc = a_y / sqrt(2 * (a_z + 1))
 		q2_acc = - a_x / sqrt(2 * (a_z + 1))
 		q3_acc = 0
 		q0_acc, q1_acc, q2_acc, q3_acc = normalizeQuaternion(q0_acc, q1_acc, q2_acc, q3_acc)
-
 		return q0_acc, q1_acc, q2_acc, q3_acc
 
 	def mag_predict(self):
