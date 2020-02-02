@@ -47,6 +47,7 @@ class complement_Filter:
 		self.pub = rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0., 0., 0.
 		self.m_xBias, self.m_yBias, self.m_zBias = -355.754807692, 389.633112981, -56.0370192308
+		self.m_xScale, self.m_yScale, self.m_zScale = 
 		self.Alpha, self.Beta, self.Gyro = 0., 0., 0.5
 		self.q0, self.q1, self.q2, self.q3 = 1., 0., 0., 0.
 		self.a_x, self.a_y, self.a_z = 0., 0., 1.
@@ -54,7 +55,6 @@ class complement_Filter:
 		self.m_x, self.m_y, self.m_z = 0., 0., 0.
 		rospy.Subscriber("/imu_raw", Imu, self.imu_raw_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.mag_raw_data)
-		rospy.sleep(0.5)
 		self.t_prev = time.time()
 		self.rate = rospy.Rate(100)
 
@@ -72,19 +72,9 @@ class complement_Filter:
 		self.g_z = msg.angular_velocity.z
 		
 	def mag_raw_data(self, msg):
-            self.mag_bias_x = -651.379996566
-            self.mag_bias_y = 256.111658654
-            self.mag_bias_z = -267.566586538
-
-            self.mag_delta_x = 411.05001717
-            self.mag_delta_y = 419.652764423
-            self.mag_delta_z = 437.548798077
-
-            self.mag_average = (self.mag_delta_x + self.mag_delta_y + self.mag_delta_z)/3
-
-            self.m_x = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
-            self.m_y = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
-            self.m_z = (self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_average)/(self.mag_delta_z)
+		self.m_x = self.mag_data.magnetic_field.x
+		self.m_y = self.mag_data.magnetic_field.y
+		self.m_z = self.mag_data.magnetic_field.z
 
 
 	def Calibration(self):
@@ -135,16 +125,10 @@ class complement_Filter:
 		self.g_z = self.g_z - self.g_zBias
 
 	def getMagnetic(self):
-                """
-		self.m_x = self.m_x - self.m_xBias
-		self.m_y = self.m_y - self.m_yBias
-		self.m_z = self.m_z - self.m_zBias
-                """
-
-                self.m_x = self.m_x
-                self.m_y = self.m_y
-                self.m_z = self.m_z
-
+		self.m_x = (self.m_x - self.m_xBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_xScale)
+		self.m_y = (self.m_y - self.m_yBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_yScale)
+		self.m_z = (self.m_z - self.m_zBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_zScale)
+	
 	def getPrediction(self):
 		self.calcDT()
 		#self.dt = 1./100.
