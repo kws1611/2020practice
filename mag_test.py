@@ -71,16 +71,16 @@ class kalman_Filter:
                 self.mag_cal_y = 0
                 self.mag_cal_z = 0
                 self.cal_count = 0
-                self.mag_x_h = 0
+                self.mag_x_h = -500
                 self.mag_x_l = 0
-                self.mag_y_h = 0
+                self.mag_y_h = -500
                 self.mag_y_l = 0
-                self.mag_z_h = 0
+                self.mag_z_h = -500
                 self.mag_z_l = 0
                 while self.mag_x == 0.0:
                         time.sleep(0.1)
                 if self.mag_x != 0.0:
-                        self.calibration_time = time.time() + 20
+                        self.calibration_time = time.time() + 60
                         while time.time() <= self.calibration_time:
                                 self.mag_cal_x += self.mag_x
                                 self.mag_cal_y += self.mag_y
@@ -98,12 +98,22 @@ class kalman_Filter:
                                 if self.mag_z_l > self.mag_z:
                                         self.mag_z_l = self.mag_z
                                 self.cal_count += 1
+
                         print("mag_x")
                         print((self.mag_x_h + self.mag_x_l)/2)
                         print("mag_y")
                         print((self.mag_y_h + self.mag_y_l)/2)
                         print("mag_z")
                         print((self.mag_z_h + self.mag_z_l)/2)
+
+                        print("mag_delta_x")
+                        print((self.mag_x_h - self.mag_x_l)/2)
+                        print("mag_delta_y")
+                        print((self.mag_y_h - self.mag_y_l)/2)
+                        print("mag_delta_z")
+                        print((self.mag_z_h - self.mag_z_l)/2)
+
+                        print("%f   %f    %f      %f      %f      %f" %(self.mag_x_l,self.mag_x_h,self.mag_y_l,self.mag_y_h,self.mag_z_l, self.mag_z_h))
 if __name__ == "__main__":
         rospy.init_node("mag_test_calibration", anonymous=True)
         rospy.loginfo("mag_test_calibration")

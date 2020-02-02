@@ -59,9 +59,9 @@ class kalman_Filter:
                 self.acc_y = float(self.imu_data.linear_acceleration.y)*9.81
                 self.acc_z = float(self.imu_data.linear_acceleration.z)*9.81
 
-                self.gyro_x = -float(self.imu_data.angular_velocity.x)
-                self.gyro_y = -float(self.imu_data.angular_velocity.y)
-                self.gyro_z = -float(self.imu_data.angular_velocity.z)
+                self.gyro_x = float(self.imu_data.angular_velocity.x)
+                self.gyro_y = float(self.imu_data.angular_velocity.y)
+                self.gyro_z = float(self.imu_data.angular_velocity.z)
 
 	def mag_raw_data(self, msg):
 		self.mag_data = msg
@@ -70,19 +70,24 @@ class kalman_Filter:
                 self.mag_bias_y = 211.888161058
                 self.mag_bias_z = -335.368569712
                 """
-                self.mag_bias_x = -414.80447115
-                self.mag_bias_y = 402.896033654
-                self.mag_bias_z = -181.684074519
+                self.mag_bias_x = -651.379996566
+                self.mag_bias_y = 256.111658654
+                self.mag_bias_z = -267.566586538
 
+                self.mag_delta_x = 411.05001717
+                self.mag_delta_y = 419.652764423
+                self.mag_delta_z = 437.548798077
 
-                self.mag_x = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_y*3)
-                self.mag_y = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_x*3)
-                self.mag_z = (self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_z*3)
+                self.mag_average = (self.mag_delta_x + self.mag_delta_y + self.mag_delta_z)/3
                 """
-                self.mag_x = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_x*3)
-                self.mag_y = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_y*3)
-                self.mag_z = (self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_bias_x + self.mag_bias_y + self.mag_bias_z)/(self.mag_bias_z*3)
+                self.mag_x = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
+                self.mag_y = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
+                self.mag_z = (self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_average)/(self.mag_delta_z)
                 """
+                self.mag_x = -(self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
+                self.mag_y = -(self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
+                self.mag_z = (self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_average)/(self.mag_delta_z)
+
 	def __init__(self):
 		self.kalman_topic = Quaternion()
 		self.X = np.matrix('1;0;0;0')
@@ -214,13 +219,13 @@ class kalman_Filter:
 			self.q2_mag = 0
 			self.q3_mag = ly / math.sqrt(2 * (self.gamma + lx * math.sqrt(self.gamma)))
                         print("     ")
-                        self.q_mag= norm_quat(self.q0_mag, self.q1_mag, self.q2_mag, -self.q3_mag)
+                        self.q_mag= norm_quat(self.q0_mag, self.q1_mag, self.q2_mag, self.q3_mag)
 		if lx < 0:
 			self.q0_mag = ly / math.sqrt(2 * (self.gamma - lx * math.sqrt(self.gamma)))
 			self.q1_mag = 0
 			self.q2_mag = 0
 			self.q3_mag = math.sqrt(self.gamma - lx * math.sqrt(self.gamma))/ math.sqrt(2 * self.gamma) 
-                        self.q_mag= norm_quat(self.q0_mag, self.q1_mag, self.q2_mag, -self.q3_mag)
+                        self.q_mag= norm_quat(self.q0_mag, self.q1_mag, self.q2_mag, self.q3_mag)
                         print("alpha")
         def get_mag_acc_calibration(self):
 
@@ -254,13 +259,14 @@ class kalman_Filter:
                 #self.q_mag_calibrating = quat_mult(self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0],self.q_mag_cal[0,0],-self.q_mag_cal[1,0],-self.q_mag_cal[2,0],-self.q_mag_cal[3,0])
                 #self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag_calibrating[0,0],self.q_mag_calibrating[1,0],self.q_mag_calibrating[2,0],self.q_mag_calibrating[3,0])
                 #self.Z = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0])
-                self.q_mag_calibrating = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],self.q_mag[3,0])
+                self.q_mag_calibrating = quat_mult(self.q_acc[0,0],self.q_acc[0,1],self.q_acc[0,2],self.q_acc[0,3],self.q_mag[0,0],self.q_mag[1,0],self.q_mag[2,0],-self.q_mag[3,0])
                 self.Z = quat_mult(self.q_mag_calibrating[0,0],self.q_mag_calibrating[1,0],self.q_mag_calibrating[2,0],self.q_mag_calibrating[3,0],self.q_mag_cal[0,0],-self.q_mag_cal[1,0],-self.q_mag_cal[2,0],-self.q_mag_cal[3,0])
                 self.A = np.identity(4) + self.dt*float(0.5)*np.matrix([[0 ,-self.gyro_x,-self.gyro_y,-self.gyro_z], [self.gyro_x, 0 ,self.gyro_z, -self.gyro_y], [self.gyro_y, -self.gyro_z ,0, self.gyro_x], [self.gyro_z, self.gyro_y ,-self.gyro_x, 0 ]])
 		# Kalman Filter
-
+                """
                 self.B = np.matrix([0,self.Z[1,0],self.Z[2,0],self.Z[3,0]])
                 self.Z - self.B.T
+                """
                 self.X = np.matrix([0, self.X[1,0], self.X[2,0], self.X[3,0]])
                 self.X = self.X.T
 		self.Xp = self.A*self.X
@@ -270,7 +276,8 @@ class kalman_Filter:
 		self.X = norm_quat(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0])
 		self.P = self.Pp - self.K*self.H*self.Pp
 
-                #self.X = self.Z
+                self.X = self.Z
+                #self.X = quat_mult(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0], math.sin(math.pi/2) , 0 , 0 ,-math.cos(math.pi/2) )
                 kalman_topic.x = self.X[1,0]
                 kalman_topic.y = self.X[2,0]
                 kalman_topic.z = self.X[3,0]

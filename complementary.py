@@ -72,12 +72,20 @@ class complement_Filter:
 		self.g_z = msg.angular_velocity.z
 		
 	def mag_raw_data(self, msg):
-                self.mag_bias_x = -528.2578125
-                self.mag_bias_y = 182.719471154
-                self.mag_bias_z = -269.374639423
-                self.m_x = (msg.magnetic_field.x - self.mag_bias_x)*self.mag_bias_x/sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
-                self.m_y = (msg.magnetic_field.y - self.mag_bias_y)*self.mag_bias_y/sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
-                self.m_z = (msg.magnetic_field.z - self.mag_bias_z)*self.mag_bias_z/sqrt(self.mag_bias_x**2 + self.mag_bias_y**2 + self.mag_bias_z**2)
+            self.mag_bias_x = -651.379996566
+            self.mag_bias_y = 256.111658654
+            self.mag_bias_z = -267.566586538
+
+            self.mag_delta_x = 411.05001717
+            self.mag_delta_y = 419.652764423
+            self.mag_delta_z = 437.548798077
+
+            self.mag_average = (self.mag_delta_x + self.mag_delta_y + self.mag_delta_z)/3
+
+            self.m_x = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
+            self.m_y = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
+            self.m_z = (self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_average)/(self.mag_delta_z)
+
 
 	def Calibration(self):
 		BiasIs = True
