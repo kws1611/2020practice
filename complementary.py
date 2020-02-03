@@ -46,9 +46,9 @@ class complement_Filter:
 	def __init__(self):
 		self.pub = rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0., 0., 0.
-		self.m_xBias, self.m_yBias, self.m_zBias = -325.1028841615, -419.402113381, -366.062419872
-		self.m_xScale, self.m_yScale, self.m_zScale = 577.638633242, 565.456249984, 537.914182692
-		self.Alpha, self.Beta, self.Gyro = 0., 0., 0.5
+		self.m_xBias, self.m_yBias, self.m_zBias = -337.917393544, -406.186107772, -365.15224359
+		self.m_xScale, self.m_yScale, self.m_zScale = 807.3140625, 537.136227965, 578.872115385
+		self.Alpha, self.Beta, self.Gyro = 0.02, 0.02, 0.5
 		self.q0, self.q1, self.q2, self.q3 = 1., 0., 0., 0.
 		self.a_x, self.a_y, self.a_z = 0., 0., 1.
 		self.g_x, self.g_y, self.g_z = 0., 0., 0.
@@ -118,7 +118,7 @@ class complement_Filter:
 			self.m_zScale = avg / (max_z - min_z)
 		return max_x, max_y, max_z, min_x, min_y, min_z
 
-	def getAccelGyro(self):
+	def getGyro(self):
 		self.g_x = self.g_x - self.g_xBias
 		self.g_y = self.g_y - self.g_yBias
 		self.g_z = self.g_z - self.g_zBias
@@ -127,18 +127,20 @@ class complement_Filter:
 		self.m_x = (self.m_x - self.m_xBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_xScale)
 		self.m_y = (self.m_y - self.m_yBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_yScale)
 		self.m_z = (self.m_z - self.m_zBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_zScale)
+		self.m_x = self.m_y
+		self.m_y = self.m_x
+		self.m_z = - self.m_z
 
 	def getPrediction(self):
 		self.calcDT()
 		#self.dt = 1./100.
-		self.getAccelGyro()
-		q0_gyro,q1_gyro,q2_gyro,q3_gyro = quaternionMultiplication(0, self.g_x, self.g_y, self.g_z, self.q0, self.q1, self.q2, self.q3)
+		self.getGyro()
+		q0_gyro, q1_gyro, q2_gyro, q3_gyro = quaternionMultiplication(0, self.g_x, self.g_y, self.g_z, self.q0, self.q1, self.q2, self.q3)
 		q0_gyro = self.q0 - 0.5 * q0_gyro * self.dt 
 		q1_gyro = self.q1 - 0.5 * q1_gyro * self.dt 
 		q2_gyro = self.q2 - 0.5 * q2_gyro * self.dt 
 		q3_gyro = self.q3 - 0.5 * q3_gyro * self.dt 
-		q0_gyro, q1_gyro, q2_gyro, q3_gyro = normalizeQuaternion(q0_gyro, q1_gyro, q2_gyro, q3_gyro)
-		return q0_gyro, q1_gyro, q2_gyro, q3_gyro
+		self.q0_gyro, self.q1_gyro, self.q2_gyro, self.q3_gyro = normalizeQuaternion(q0_gyro, q1_gyro, q2_gyro, q3_gyro)
 		
 	def gainFunction(self, a, b, c):
 		norm = sqrt(a ** 2 + b ** 2 + c ** 2)
@@ -154,7 +156,7 @@ class complement_Filter:
 		#alpha = self.gainFunction(self.a_x, self.a_y, self.a_z) * self.Alpha
 		alpha = self.Alpha
 		a_x, a_y, a_z = normalization(self.a_x, self.a_y, self.a_z)
-		gx, gy, gz = rotateVectorQuaternion(a_x, a_y, a_z, self.q0, -self.q1, -self.q2, -self.q3)
+		gx, gy, gz = rotateVectorQuaternion(a_x, a_y, a_z, self.q0_gyro, -self.q1_gyro, -self.q2_gyro, -self.q3_gyro)
 		q0_acc = alpha * sqrt(0.5 * (gx + 1)) + (1 - alpha)
 		q1_acc = alpha * ( - gy / sqrt(2 * (gz + 1)))
 		q2_acc = alpha * ( gx / sqrt(2 * (gz + 1)))
@@ -167,45 +169,47 @@ class complement_Filter:
 		beta = self.Beta
 		lx, ly, lz = rotateVectorQuaternion(self.m_x, self.m_y, self.m_z, self.q0, -self.q1, -self.q2, -self.q3)
 		gamma = lx ** 2 + ly ** 2
-		if lx >= 0 :
-			q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
-			q1_mag = 0
-			q2_mag = 0
-			q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
-			q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
-		else :
-			q0_mag = beta * sqrt(gamma - lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
-			q1_mag = 0
-			q2_mag = 0
-			q3_mag = beta * ly / sqrt(2 * (gamma - lx * sqrt(gamma)))
-			q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
+		q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
+		q1_mag = 0
+		q2_mag = 0
+		q3_mag = beta * ly / sqrt(2 * (gamma + lx * sqrt(gamma)))
+		q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
 		return q0_mag, q1_mag, q2_mag, q3_mag
 
 	def accel_predict(self):
 		self.getAccelGyro()
-		self.a_x, self.a_y, self.a_z = normalization(self.a_x, self.a_y, self.a_z)
-		q0_acc = sqrt(0.5 *(self.a_z + 1))
-		q1_acc = - self.a_y / sqrt(2 * (self.a_z + 1))
-		q2_acc = self.a_x / sqrt(2 * (self.a_z + 1))
-		q3_acc = 0
+		a_x, a_y, a_z = normalization(self.a_x, self.a_y, self.a_z)
+		if self.a_z >= 0:		
+			q0_acc = sqrt(0.5 * (a_z + 1))
+			q1_acc = - a_y / sqrt(2 * (a_z + 1))
+			q2_acc = a_x / sqrt(2 * (a_z + 1))
+			q3_acc = 0
+		else :
+			q0_acc = - a_y / sqrt(2 * (1 - a_z))
+			q1_acc = sqrt(0.5 * (1 - a_z))
+			q2_acc = 0
+			q3_acc = a_x / sqrt(2 * (1 - a_z))
 		q0_acc, q1_acc, q2_acc, q3_acc = normalizeQuaternion(q0_acc, q1_acc, q2_acc, q3_acc)
 		return q0_acc, q1_acc, q2_acc, q3_acc
 
 	def mag_predict(self):
 		self.getMagnetic()
 		q0_acc, q1_acc, q2_acc, q3_acc = self.accel_predict()
-		lx, ly, lz = rotateVectorQuaternion(self.m_x, self.m_y, self.m_z, q0_acc, -q1_acc, -q2_acc, -q3_acc)
+		m_x, m_y, m_z = normalization(self.m_x, self.m_y, self.m_z)
+		lx, ly, lz = rotateVectorQuaternion(m_x, m_y, m_z, q0_acc, -q1_acc, -q2_acc, -q3_acc)
 		gamma = lx ** 2 + ly ** 2
 		if lx >= 0 :
 			q0_mag = sqrt((gamma + lx * sqrt(gamma))/ (2 * gamma))
 			q1_mag = 0
 			q2_mag = 0
 			q3_mag = ly / sqrt( 2 * (gamma + lx * sqrt(gamma)))
+			print(1)
 		else:
 			q0_mag = ly / sqrt( 2 * (gamma - lx * sqrt(gamma)))
 			q1_mag = 0
 			q2_mag = 0
 			q3_mag = sqrt((gamma - lx * sqrt(gamma))/ (2 * gamma))
+			print(2)
 		q0_mag, q1_mag, q2_mag, q3_mag = normalizeQuaternion(q0_mag, q1_mag, q2_mag, q3_mag)
 		return q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag
 
@@ -219,28 +223,27 @@ class complement_Filter:
 		while not rospy.is_shutdown():
 			#if self.steadyState() == True:
 			#	self.Calibration()
-			q0_gyro, q1_gyro, q2_gyro, q3_gyro = self.getPrediction()
+			self.getPrediction()
 			q0_acc, q1_acc, q2_acc, q3_acc = self.acc_Correction()
-			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(q0_gyro, q1_gyro, q2_gyro, q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
-			self.q0, self.q1, self.q2, self.q3 = normalizeQuaternion(self.q0, self.q1, self.q2, self.q3)
+			q0, q1, q2, q3 = quaternionMultiplication(self.q0_gyro, self.q1_gyro, self.q2_gyro, self.q3_gyro, q0_acc, q1_acc, q2_acc, q3_acc)
+			self.q0, self.q1, self.q2, self.q3 = normalizeQuaternion(q0, q1, q2, q3)
 			q0_mag, q1_mag, q2_mag, q3_mag = self.mag_Correction()
-			self.q0, self.q1, self.q2, self.q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, q0_mag, q1_mag, q2_mag, q3_mag)
-			self.q0, self.q1, self.q2, self.q3 = normalizeQuaternion(self.q0, self.q1, self.q2, self.q3)
+			q0, q1, q2, q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, q0_mag, q1_mag, q2_mag, q3_mag)
+			self.q0, self.q1, self.q2, self.q3 = normalizeQuaternion(q0, q1, q2, q3)
 			quat_topic = PoseWithCovarianceStamped()
 			quat_topic.header.stamp = rospy.Time.now()
 			quat_topic.header.frame_id = "world"
 			quat_topic.pose.pose.position.x = 0
 			quat_topic.pose.pose.position.y = 0
 			quat_topic.pose.pose.position.z = 0
-			
-			quat_topic.pose.pose.orientation.x = - q1_gyro
-			quat_topic.pose.pose.orientation.y = - q2_gyro
-			quat_topic.pose.pose.orientation.z = - q3_gyro
-			quat_topic.pose.pose.orientation.w = q0_gyro
-			#quat_topic.pose.pose.orientation.x = - self.q1
-			#quat_topic.pose.pose.orientation.y = - self.q2
-			#quat_topic.pose.pose.orientation.z = - self.q3
-			#quat_topic.pose.pose.orientation.w = self.q0
+			quat_topic.pose.pose.orientation.x = - self.q1
+			quat_topic.pose.pose.orientation.y = - self.q2
+			quat_topic.pose.pose.orientation.z = - self.q3
+			quat_topic.pose.pose.orientation.w = self.q0
+			#quat_topic.pose.pose.orientation.x = - q1_gyro
+			#quat_topic.pose.pose.orientation.y = - q2_gyro
+			#quat_topic.pose.pose.orientation.z = - q3_gyro
+			#quat_topic.pose.pose.orientation.w = q0_gyro
 			self.pub.publish(quat_topic)
 			self.rate.sleep()
 
@@ -268,8 +271,8 @@ if __name__=="__main__":
 	complement = complement_Filter()
 	try:
 		rospy.loginfo("complementary filter start!")
-		#complement.imu_Mag_Complementary()
-		complement.acc_Mag_Complementary()
+		complement.imu_Mag_Complementary()
+		#complement.acc_Mag_Complementary()
 	except rospy.ROSInterruptException:
 		print "ROS terminated"
 		pass
