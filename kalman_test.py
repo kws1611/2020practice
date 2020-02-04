@@ -90,11 +90,11 @@ class kalman_Filter:
                 """
                 self.mag_average = (self.mag_delta_x + self.mag_delta_y + self.mag_delta_z)/3
 
-                self.mag_x = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
-                self.mag_y = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
+                self.mag_x = -(self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
+                self.mag_y = -(self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
                 self.mag_z = -(self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_average)/(self.mag_delta_z)
                 """
-                self.mag_x = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
+                self.mag_x = -(self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
                 self.mag_y = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
                 self.mag_z = (self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_average)/(self.mag_delta_z)
                 """
@@ -111,15 +111,13 @@ class kalman_Filter:
 
 
                 #Q final
-                self.Q = 10.0**(-4)/5.0*np.matrix([[1.0, 0, 0, 0],[0, 1.50628058**2, 0, 0],[0, 0, 1.4789602**2, 0],[0, 0, 0, 1.37315181**2]])
+                self.Q = 10.0**(-10)*np.matrix([[1.0, 0, 0, 0],[0, 1.50628058**2, 0, 0],[0, 0, 1.4789602**2, 0],[0, 0, 0, 1.37315181**2]])
 
 
                 #self.R =np.matrix([[0.0209789550647**2, 0, 0, 0],[0, 0.00541388117932**2, 0, 0], [0, 0, 0.0102877460488**2, 0], [0, 0, 0, 0.0161420424737**2]])
                 #self.R =np.matrix([[0, 0, 0, 0],[0, 0.00541388117932**2, 0, 0], [0, 0, 0.0102877460488**2, 0], [0, 0, 0, 0.0161420424737**2]])
 
                 #self.R =np.matrix([[0.0209789550647**2, 0, 0, 0],[0, 0.00541388117932**2, 0, 0], [0, 0, 0.0102877460488**2, 0], [0, 0, 0, 1]])
-
-
 
 
                 #final R
@@ -276,12 +274,12 @@ class kalman_Filter:
                         self.q2_mag_cal = 0
                         self.q3_mag_cal = math.sqrt(self.gamma_cal - lx_cal * math.sqrt(self.gamma_cal))/ math.sqrt(2 * self.gamma_cal)
                         self.q_mag_cal= norm_quat(self.q0_mag_cal, self.q1_mag_cal, self.q2_mag_cal, self.q3_mag_cal)
-
+                self.q_mag_cal = quat_mult( math.cos(math.pi/2) , 0 , 0 ,math.sin(math.pi/2),self.q_mag_cal[0,0],self.q_mag_cal[1,0],self.q_mag_cal[2,0],self.q_mag_cal[3,0] )
 
         def kalman(self):
                 pose_topic = PoseWithCovarianceStamped()
                 kalman_topic = Quaternion()
-                #self.gyro_bias_update()
+                self.gyro_bias_update()
                 self.get_acc_quat()
 
                 self.get_mag_quat()
@@ -318,6 +316,7 @@ class kalman_Filter:
                 #self.Xp = self.Xp.T
                 self.Pp = self.A*self.P*self.A.T +self.Q
                 self.K = self.Pp*self.H.T*lin.inv(self.H*self.Pp*self.H.T + self.R)
+                """
                 if (self.Xp[1,0] - self.Z[1,0])>1 or (self.Xp[1,0] - self.Z[1,0])< -1:
                         print("X")
                         print(self.X)
@@ -334,10 +333,33 @@ class kalman_Filter:
                         print(self.X)
                         print("Z")
                         print(self.Z)
+                """
 
-                self.X = self.Xp + self.K*(self.Z - self.H*self.Xp)
-                self.X = norm_quat(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0])
-                self.P = self.Pp - self.K*self.H*self.Pp
+                if (self.Xp[0,0] - self.Z[0,0])>1 or (self.Xp[0,0] - self.Z[0,0])< -1 or (self.Xp[1,0] - self.Z[1,0])>1 or (self.Xp[1,0] - self.Z[1,0])< -1 or (self.Xp[2,0] - self.Z[2,0])>1 or (self.Xp[2,0] - self.Z[2,0])< -1 or (self.Xp[3,0] - self.Z[3,0])>1 or (self.Xp[3,0] - self.Z[3,0])< -1 :
+                        """
+                        if (self.Xp[0,0] - self.Z[0,0])>1 or (self.Xp[0,0] - self.Z[0,0])< -1 :
+                                self.Z = np.matrix([-self.Z[0,0],self.Z[1,0],self.Z[2,0],self.Z[3,0]])
+                                self.Z = self.Z.T
+
+                        else :
+                                self.Z = np.matrix([self.Z[0,0],-self.Z[1,0],-self.Z[2,0],-self.Z[3,0]])
+                                self.Z = self.Z.T
+                        self.X = self.Xp + self.K*(self.Z - self.H*self.Xp)
+                        self.X = norm_quat(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0])
+                        self.P = self.Pp - self.K*self.H*self.Pp
+                        """
+                        self.X = self.Xp
+
+                        print("non")
+                else :
+                        self.X = self.Xp + self.K*(self.Z - self.H*self.Xp)
+                        self.X = norm_quat(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0])
+                        self.P = self.Pp - self.K*self.H*self.Pp
+                        print("kalman")
+
+
+                #self.X = self.Z
+
 
 
 
@@ -349,7 +371,7 @@ class kalman_Filter:
 
                 #self.X = self.A * self.X
 
-                #self.X = quat_mult(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0], math.cos(math.pi/2) , 0 , 0 ,-math.sin(math.pi/2) )
+                #self.X = quat_mult(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0], math.cos(math.pi/2) , 0 , 0 ,math.sin(math.pi/2) )
                 kalman_topic.x = self.X[1,0]
                 kalman_topic.y = self.X[2,0]
                 kalman_topic.z = self.X[3,0]
