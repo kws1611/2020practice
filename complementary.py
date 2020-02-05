@@ -45,7 +45,6 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 class complement_Filter:
 	def __init__(self):
 		self.pub = rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
-		self.pub2 = rospy.Publisher("/quat2", PoseWithCovarianceStamped, queue_size = 1)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0., 0., 0.
 		self.m_xBias, self.m_yBias, self.m_zBias = -651.379996566, 256.111658654, -267.566586538
 		self.m_xScale, self.m_yScale, self.m_zScale = 411.05001717, 419.652764423, 437.548798077
@@ -86,12 +85,6 @@ class complement_Filter:
 		q0, q1, q2, q3 = quaternionMultiplication(q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag)
 		return q0, q1, q2, q3
 
-	def gyroUpdate(self):
-		BiasIs = True
-		self.g_xBias = self.g_xBias + (self.g_x - self.g_xBias) * self.Gyro
-		self.g_yBias = self.g_yBias + (self.g_y - self.g_yBias) * self.Gyro
-		self.g_zBias = self.g_zBias + (self.g_z - self.g_zBias) * self.Gyro
-	
 	def steadyState(self):
 		norm = sqrt(self.g_x ** 2 + self.g_y ** 2 + self.g_z ** 2)
 		axy = sqrt(self.a_x ** 2 + self.a_y ** 2)
@@ -99,6 +92,13 @@ class complement_Filter:
 			print(1)
 			return True
 		return False
+
+	def gyroUpdate(self):
+		BiasIs = True
+		self.g_xBias = self.g_xBias + (self.g_x - self.g_xBias) * self.Gyro
+		self.g_yBias = self.g_yBias + (self.g_y - self.g_yBias) * self.Gyro
+		self.g_zBias = self.g_zBias + (self.g_z - self.g_zBias) * self.Gyro
+	
 
 	def getGyroCali(self, sum_x, sum_y, sum_z, num, goal):
 		sum_x = sum_x + self.g_x
@@ -241,18 +241,18 @@ class complement_Filter:
 		while not rospy.is_shutdown():
 			q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag = self.mag_predict()
 			q0, q1, q2, q3 = quaternionMultiplication(q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag)
-			q0, q1, q2, q3 = quaternionMultiplication(q0, q1, q2, q3,np.cos(pi/4), 0, 0, np.sin(pi/4))
-			quat_topic2 = PoseWithCovarianceStamped()
-			quat_topic2.header.stamp = rospy.Time.now()
-			quat_topic2.header.frame_id = "world"
-			quat_topic2.pose.pose.position.x = 0
-			quat_topic2.pose.pose.position.y = 0
-			quat_topic2.pose.pose.position.z = 0
-			quat_topic2.pose.pose.orientation.x = - q1
-			quat_topic2.pose.pose.orientation.y = - q2
-			quat_topic2.pose.pose.orientation.z = - q3
-			quat_topic2.pose.pose.orientation.w = q0
-			self.pub2.publish(quat_topic2)
+			q0, q1, q2, q3 = quaternionMultiplication(q0, q1, q2, q3, np.cos(pi/4), 0, 0, np.sin(pi/4))
+			quat_topic = PoseWithCovarianceStamped()
+			quat_topic.header.stamp = rospy.Time.now()
+			quat_topic.header.frame_id = "world"
+			quat_topic.pose.pose.position.x = 0
+			quat_topic.pose.pose.position.y = 0
+			quat_topic.pose.pose.position.z = 0
+			quat_topic.pose.pose.orientation.x = - q1
+			quat_topic.pose.pose.orientation.y = - q2
+			quat_topic.pose.pose.orientation.z = - q3
+			quat_topic.pose.pose.orientation.w = q0
+			self.pub.publish(quat_topic)
 			self.rate.sleep()
 
 if __name__=="__main__":
