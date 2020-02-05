@@ -50,6 +50,7 @@ class error:
 
         def motion_cb(self,msg):
                 self.mot_msg = msg
+                self.motion_time = self.mot_msg.header.stamp.secs + self.mot_msg.header.stamp.nsecs*10**(-9)
                 self.motion_x = self.mot_msg.pose.orientation.x
                 self.motion_y = self.mot_msg.pose.orientation.y
                 self.motion_z = self.mot_msg.pose.orientation.z
@@ -57,6 +58,7 @@ class error:
 
         def kalman_cb(self,msg):
                 self.kalman_msg = msg
+
                 self.kal_x=self.kalman_msg.pose.pose.orientation.x
                 self.kal_y=self.kalman_msg.pose.pose.orientation.y
                 self.kal_z=self.kalman_msg.pose.pose.orientation.z
@@ -64,6 +66,7 @@ class error:
 
         def comp_cb(self,msg):
                 self.comp_msg = msg
+
                 self.comp_x=self.comp_msg.pose.pose.orientation.x
                 self.comp_y=self.comp_msg.pose.pose.orientation.y
                 self.comp_z=self.comp_msg.pose.pose.orientation.z
@@ -85,6 +88,7 @@ class error:
                 self.motion_y = 0.0
                 self.motion_z = 0.0
                 self.motion_w = 0.0
+                self.motion_time = 0.0
 
         def kalman_coordinate_cal(self, x , y, z):
                 z_rotated_coordinate = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z) * np.matrix([[np.cos(np.pi/2), -np.sin(np.pi/2), 0 ],[np.sin(np.pi/2),np.cos(np.pi/2),0],[0,0,1]])*np.matrix([[x],[y],[z]])
@@ -128,11 +132,11 @@ class error:
                 self.error_comp_yaw = self.comp_yaw - self.mot_yaw
                 """
 	def error_cal(self):
-                self.kal_w = 1
+
                 error_kal_topic = PoseStamped()
                 #error_camp_topic = Quaternion()
                 #self.error_compt_coordinate_cal()
-
+                print("%10.10f" %self.motion_time)
                 self.error_kal_coordinate_cal()
 
                 self.error_rpy_cal()
