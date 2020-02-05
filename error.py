@@ -38,6 +38,14 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
         vz = (2 * (q1 * q3 - q0 * q2) * x + 2 * (q2 * q3 + q0 * q1) * y + (q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) * z)
         return vx, vy, vz
 
+def quat_to_matrix(q0,q1,q2,q3):
+        rotation_mat = np.matrix([[1-2*q2**2 - 2*q3**2, 2*q1*q2 - 2*q0*q3, 2*q1*q3 + 2*q0*q2],[2*q1*q2 + 2*q0*q3, 1-2*q1** -2*q3**2, 2*q2*q3 - q2*q0*q1],[2*q1*q3 - 2*q0*q2, 2*q2*q3 + 2*q3*q1, 1-2*q1**2 - 2*q2**2]])
+
+        return rotation_mat
+
+
+
+
 class error:
 
         def motion_cb(self,msg):
@@ -77,6 +85,11 @@ class error:
                 self.motion_y = 0.0
                 self.motion_z = 0.0
                 self.motion_w = 0.0
+
+        def kalman_coordinate_cal(self, x , y, z):
+                z_rotated_coordinate = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z) * np.matrix([[np.cos(np.pi/2), -np.sin(np.pi/2), 0 ],[np.sin(np.pi/2),np.cos(np.pi/2),0],[0,0,1]])*np.matrix([[x],[y],[z]])
+
+                return z_rotated_coordinate
 
         def error_kal_coordinate_cal(self):
                 self.kal_err_x,self.kal_err_y,self.kal_err_z = rotateVectorQuaternion(1, 1, 1, self.kal_w, self.kal_x, self.kal_y, self.kal_z)
@@ -123,6 +136,14 @@ class error:
                 self.error_kal_coordinate_cal()
 
                 self.error_rpy_cal()
+                """
+                change_100=self.kalman_coordinate_cal(1,0,0) - quat_to_matrix(self.motion_w, self.motion_x, self.motion_y, self.motion_z)*np.matrix([[1],[0],[0]])
+                print(change_100)
+                change_010=self.kalman_coordinate_cal(0,1,0) - quat_to_matrix(self.motion_w, self.motion_x, self.motion_y, self.motion_z)*np.matrix([[0],[1],[0]])
+                print(change_010)
+                change_001=self.kalman_coordinate_cal(0,0,1) - quat_to_matrix(self.motion_w, self.motion_x, self.motion_y, self.motion_z)*np.matrix([[0],[0],[1]])
+                print(change_001)
+                """
 
 		# error calculating
                 self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,self.motion_x,self.motion_y,self.motion_z)

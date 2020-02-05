@@ -90,8 +90,8 @@ class kalman_Filter:
                 """
                 self.mag_average = (self.mag_delta_x + self.mag_delta_y + self.mag_delta_z)/3
 
-                self.mag_x = -(self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
-                self.mag_y = -(self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
+                self.mag_x = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
+                self.mag_y = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
                 self.mag_z = -(self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_average)/(self.mag_delta_z)
                 """
                 self.mag_x = -(self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
@@ -217,7 +217,7 @@ class kalman_Filter:
         def state_check(self):
                 gyro_scale = math.sqrt(self.gyro_x**2 + self.gyro_y**2 + self.gyro_z**2)
                 acc_scale = math.sqrt(self.acc_x**2 + self.acc_y**2)
-                if gyro_scale < 0.1 and acc_scale < 0.1 :
+                if gyro_scale < 0.01 and acc_scale < 0.1 :
                         return True
                 else :
                         return False
@@ -274,7 +274,7 @@ class kalman_Filter:
                         self.q2_mag_cal = 0
                         self.q3_mag_cal = math.sqrt(self.gamma_cal - lx_cal * math.sqrt(self.gamma_cal))/ math.sqrt(2 * self.gamma_cal)
                         self.q_mag_cal= norm_quat(self.q0_mag_cal, self.q1_mag_cal, self.q2_mag_cal, self.q3_mag_cal)
-                self.q_mag_cal = quat_mult( math.cos(math.pi/2) , 0 , 0 ,math.sin(math.pi/2),self.q_mag_cal[0,0],self.q_mag_cal[1,0],self.q_mag_cal[2,0],self.q_mag_cal[3,0] )
+                #self.q_mag_cal = quat_mult( math.cos(math.pi/2) , 0 , 0 ,math.sin(math.pi/2),self.q_mag_cal[0,0],self.q_mag_cal[1,0],self.q_mag_cal[2,0],self.q_mag_cal[3,0] )
 
         def kalman(self):
                 pose_topic = PoseWithCovarianceStamped()
