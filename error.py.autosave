@@ -123,7 +123,7 @@ class error:
                 self.error_kal_pitch = self.kal_pitch - self.mot_pitch
                 self.error_kal_yaw = self.kal_yaw - self.mot_yaw
                 """
-                self.error_comp_roll = self.comp_roll - self.mot_roll
+                self.error_comp_roll = self.comp_roll - self.mot_rolsl
                 self.error_comp_pitch = self.comp_pitch - self.mot_pitch
                 self.error_comp_yaw = self.comp_yaw - self.mot_yaw
                 """
