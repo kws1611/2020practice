@@ -46,7 +46,7 @@ def quat_to_matrix(q0,q1,q2,q3):
 
 class error:
         def motion_cb(self):
-                A = quat_mult(self.q0_init, -self.q1_init,-self.q2_init, self.q3_init,self.motion_w, self.motion_x, self.motion_y, self.motion_z)
+                A = quat_mult(self.q0_init, -self.q1_init,-self.q2_init, -self.q3_init,self.motion_w, self.motion_x, self.motion_y, self.motion_z)
                 self.motion_w, self.motion_x, self.motion_y, self.motion_z = A[0,0], A[0,1], A[0,2], A[0,3]
 
         def get_motion_cb(self,msg):
