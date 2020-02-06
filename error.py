@@ -56,11 +56,11 @@ class error:
                 self.motion_y = self.mot_msg.pose.orientation.y
                 self.motion_z = self.mot_msg.pose.orientation.z
                 self.motion_w = self.mot_msg.pose.orientation.w
-                self.motion_cb()
+                #self.motion_cb()
 
         def kalman_cb(self,msg):
                 self.kalman_msg = msg
-
+                self.kal_time = self.kalman_msg.header.stamp.secs + self.kalman_msg.header.stamp.nsecs*10**(-9)
                 self.kal_x=self.kalman_msg.pose.pose.orientation.x
                 self.kal_y=self.kalman_msg.pose.pose.orientation.y
                 self.kal_z=self.kalman_msg.pose.pose.orientation.z
@@ -68,7 +68,7 @@ class error:
 
         def comp_cb(self,msg):
                 self.comp_msg = msg
-
+                self.comp_time = self.comp_msg.header.stamp.secs + self.comp_msg.header.stamp.nsecs*10**(-9)
                 self.comp_x=self.comp_msg.pose.pose.orientation.x
                 self.comp_y=self.comp_msg.pose.pose.orientation.y
                 self.comp_z=self.comp_msg.pose.pose.orientation.z
@@ -97,31 +97,71 @@ class error:
 		rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
                 #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
                 rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.get_motion_cb)
-                self.error_kalman_pub = rospy.Publisher("/kalman_error",PoseStamped, queue_size=1)
-                self.error_pub = rospy.Publisher("/error",error_msg, queue_size=1)
-                #self.error_comp_pub = rospy.Publisher("/comp_error",Quaternion, queue_size=1)
+                self.error_comp_pub = rospy.Publisher("/kal_error",error_msg, queue_size=1)
+                self.error_kal_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
+
                 self.kal_x= 0.0
                 self.kal_y= 0.0
                 self.kal_z= 0.0
                 self.kal_w= 0.0
+                self.kal_time = 0.0
+                self.comp_x= 0.0
+                self.comp_y= 0.0
+                self.comp_z= 0.0
+                self.comp_w= 0.0
+                self.comp_time = 0.0
                 self.motion_x = 0.0
                 self.motion_y = 0.0
                 self.motion_z = 0.0
                 self.motion_w = 0.0
                 self.motion_time = 0.0
+                self.q0_init = 0.0
+                self.q1_init = 0.0
+                self.q2_init = 0.0
+                self.q3_init = 0.0
                 self.initialize()
 
+        def motion_calibration(self):
+                motion = quat_mult(self.motion_w,self.motion_x,self.motion_y,self.motion_z,self.q0_init,-self.q1_init,-self.q2_init,-self.q3_init)
 
-        def kalman_coordinate_cal(self, x , y, z):
-                z_rotated_coordinate = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z) * np.matrix([[np.cos(np.pi/2), -np.sin(np.pi/2), 0 ],[np.sin(np.pi/2),np.cos(np.pi/2),0],[0,0,1]])*np.matrix([[x],[y],[z]])
+                self.motion_w = motion[0,0]
+                self.motion_x = motion[1,0]
+                self.motion_y = motion[2,0]
+                self.motion_z = motion[3,0]
 
-                return z_rotated_coordinate
+        def kal_coordinate_cal(self, x , y, z):
+                kal_turned_coor = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z)*np.matrix([[x],[y],[z]])
 
-        def error_kal_coordinate_cal(self):
-                self.kal_err_x,self.kal_err_y,self.kal_err_z = rotateVectorQuaternion(1, 1, 1, self.kal_w, self.kal_x, self.kal_y, self.kal_z)
-                self.mot_err_x,self.mot_err_y,self.mot_err_z = rotateVectorQuaternion(1, 1, 1, self.motion_w, self.motion_x, self.motion_y, self.motion_z)
+                return kal_turned_coor
 
-                self.kal_err_dist = math.sqrt((self.kal_err_x-self.mot_err_x)**2 + (self.kal_err_y-self.mot_err_y)**2 + (self.kal_err_z - self.mot_err_z)**2)
+        def motion_coordinate_cal(self, x , y, z):
+                motion_turned_coor = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z)*np.matrix([[x],[y],[z]])
+
+                return motion_turned_coor
+
+        def comp_coordinate_cal(self, x , y, z):
+                comp_turned_coor = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z)*np.matrix([[x],[y],[z]])
+
+                return comp_turned_coor
+        def kal_coordinate_error_calculation(self):
+                self.kal_x_diff = self.motion_coordinate_cal(1,0,0) - self.kal_coordinate_cal(1,0,0)
+                self.kal_y_diff = self.motion_coordinate_cal(0,1,0) - self.kal_coordinate_cal(0,1,0)
+                self.kal_z_diff = self.motion_coordinate_cal(0,0,1) - self.kal_coordinate_cal(0,0,1)
+                self.kal_x_dist = math.sqrt(self.kal_x_diff[0,0]**2 + self.kal_x_diff[1,0]**2 + self.kal_x_diff[2,0]**2)
+                self.kal_y_dist = math.sqrt(self.kal_y_diff[0,0]**2 + self.kal_y_diff[1,0]**2 + self.kal_y_diff[2,0]**2)
+                self.kal_z_dist = math.sqrt(self.kal_z_diff[0,0]**2 + self.kal_z_diff[1,0]**2 + self.kal_z_diff[2,0]**2)
+
+                self.kal_diff_size = math.sqrt(self.kal_x_dist**2 + self.kal_y_dist**2 + self.kal_z_dist**2)
+
+        def comp_coordinate_error_calculation(self):
+                self.comp_x_diff = self.motion_coordinate_cal(1,0,0) - self.comp_coordinate_cal(1,0,0)
+                self.comp_y_diff = self.motion_coordinate_cal(0,1,0) - self.comp_coordinate_cal(0,1,0)
+                self.comp_z_diff = self.motion_coordinate_cal(0,0,1) - self.comp_coordinate_cal(0,0,1)
+                self.comp_x_dist = math.sqrt(self.comp_x_diff[0,0]**2 + self.comp_x_diff[1,0]**2 + self.comp_x_diff[2,0]**2)
+                self.comp_y_dist = math.sqrt(self.comp_y_diff[0,0]**2 + self.comp_y_diff[1,0]**2 + self.comp_y_diff[2,0]**2)
+                self.comp_z_dist = math.sqrt(self.comp_z_diff[0,0]**2 + self.comp_z_diff[1,0]**2 + self.comp_z_diff[2,0]**2)
+
+                self.comp_diff_size = math.sqrt(self.comp_x_diff**2 + self.comp_y_diff**2 + self.comp_z_diff**2)
 
         def error_rpy(self,q0,q1,q2,q3):
                 roll = math.atan2(2*(q0*q1 + q2*q3),(1-2*(q1**2 + q2**2)))
@@ -154,49 +194,61 @@ class error:
                 self.error_comp_yaw = self.comp_yaw - self.mot_yaw
                 """
 	def error_cal(self):
-                error_topic=error_msg()
-                error_kal_topic = PoseStamped()
-                #error_camp_topic = Quaternion()
-                #self.error_compt_coordinate_cal()
-                print("%10.10f" %self.motion_time)
-                self.error_kal_coordinate_cal()
-
+                self.motion_calibration()
+                err_kal_topic=error_msg()
+                #error_comp_topic = error_msg()
                 self.error_rpy_cal()
-                """
-                change_100=self.kalman_coordinate_cal(1,0,0) - quat_to_matrix(self.motion_w, self.motion_x, self.motion_y, self.motion_z)*np.matrix([[1],[0],[0]])
-                print(change_100)
-                change_010=self.kalman_coordinate_cal(0,1,0) - quat_to_matrix(self.motion_w, self.motion_x, self.motion_y, self.motion_z)*np.matrix([[0],[1],[0]])
-                print(change_010)
-                change_001=self.kalman_coordinate_cal(0,0,1) - quat_to_matrix(self.motion_w, self.motion_x, self.motion_y, self.motion_z)*np.matrix([[0],[0],[1]])
-                print(change_001)
-                """
-
+                self.kal_coordinate_error_calculation()
+                #self.comp_coordinate_error_calculation()
 		# error calculating
-                self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,self.motion_x,self.motion_y,self.motion_z)
-                #self.comp_error = quat_mult(self.comp_w,self.comp_x,self.comp_y,self.comp_z,self.motion_w,self.motion_x,self.motion_y,self.motion_z)
-                error_kal_topic.header.frame_id = "world"
-                error_topic.x = 1.0
-                error_topic.y = 2.0
-                error_topic.z = 3.0
-                error_kal_topic.pose.position.x = 0
-                error_kal_topic.pose.position.y = 0
-                error_kal_topic.pose.position.z = 0
-                error_kal_topic.pose.orientation.x = self.kal_error[1,0]
-                error_kal_topic.pose.orientation.y = self.kal_error[2,0]
-                error_kal_topic.pose.orientation.z = self.kal_error[3,0]
-                error_kal_topic.pose.orientation.w = self.kal_error[0,0]
+                self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
+                #self.comp_error = quat_mult(self.comp_w,self.comp_x,self.comp_y,self.comp_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
+                #err_kal_topic.x = self.kal_x_diff
+                #err_kal_topic.y =self.kal_y_diff
+                #err_kal_topic.z =self.kal_z_diff
+                err_kal_topic.size =self.kal_diff_size
+
+                err_kal_topic.time = self.kal_time
+                err_kal_topic.mot_time = self.motion_time
+
+                err_kal_topic.roll = self.kal_roll
+                err_kal_topic.pitch = self.kal_pitch
+                err_kal_topic.yaw = self.kal_yaw
+
+                err_kal_topic.mot_roll = self.mot_roll
+                err_kal_topic.mot_pitch = self.mot_pitch
+                err_kal_topic.mot_yaw = self.mot_yaw
+
+                err_kal_topic.err_roll = self.error_kal_roll
+                err_kal_topic.err_pitch = self.error_kal_pitch
+                err_kal_topic.err_yaw = self.error_kal_yaw
+
+                err_kal_topic.err_quat_x = self.kal_error[1,0]
+                err_kal_topic.err_quat_y = self.kal_error[2,0]
+                err_kal_topic.err_quat_z = self.kal_error[3,0]
+                err_kal_topic.err_quat_w = self.kal_error[0,0]
+
+                err_kal_topic.quat_x = self.kal_x
+                err_kal_topic.quat_y = self.kal_y
+                err_kal_topic.quat_z = self.kal_z
+                err_kal_topic.quat_w = self.kal_w
                 """
 		error_comp_topc.x = self.comp_error[1,0]
 		error_comp_topc.y = self.comp_error[2,0]
 		error_comp_topc.z = self.comp_error[3,0]
 		error_comp_topc.w = self.comp_error[0,0]
                 """
-                print("kalman error distance %.5f " %self.kal_err_dist)
+
+                if self.kal_diff_size != 0.0:
+                        print("size")
+                if self.kal_error[0,0] != 0.0:
+                        print("quat")
+                #print("kalman error distance %.5f " %self.kal_err_dist)
                 #print("complementary error distance %.5f " %self.comp_err_dist)
-                print("kalman error roll %.5f pitch %.5f yaw %.5f"  %(self.error_kal_roll,self.error_kal_pitch,self.error_kal_yaw))
+                #print("kalman error roll %.5f pitch %.5f yaw %.5f"  %(self.error_kal_roll,self.error_kal_pitch,self.error_kal_yaw))
                 #print("complementary error roll %.5f pitch %.5f yaw %.5f"  %(self.error_comp_roll,self.error_comp_pitch,self.error_comp_yaw))
-                self.error_kalman_pub.publish(error_kal_topic)
-                self.error_pub.publish(error_topic)
+                self.error_kal_pub.publish(err_kal_topic)
+
                 #self.error_comp_pub.publish(error_comp_topic)
 		self.rate.sleep()
 
