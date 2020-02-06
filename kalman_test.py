@@ -121,7 +121,7 @@ class kalman_Filter:
 
 
                 #final R
-                self.R = np.matrix([[0.00840483082215**2, 0, 0, 0],[0, 0.00100112198402**2, 0, 0], [0, 0, 0.00102210818946**2, 0], [0, 0, 0, 0.0114244938775**2]])
+                self.R = 5*np.matrix([[0.00840483082215**2, 0, 0, 0],[0, 0.00100112198402**2, 0, 0], [0, 0, 0.00102210818946**2, 0], [0, 0, 0, 0.0114244938775**2]])
 
 
                 # Subscriber created
@@ -301,15 +301,6 @@ class kalman_Filter:
                 #self.Z = np.matrix([self.Z[0,0],-self.Z[1,0],-self.Z[2,0],-self.Z[3,0]])
                 #self.Z = norm_quat(self.Z[0,0],-self.Z[1,0],-self.Z[2,0],-self.Z[3,0])
 
-
-                """
-                self.B = np.matrix([0,self.Z[1,0],self.Z[2,0],self.Z[3,0]])
-                self.Z = self.B.T
-
-                self.X = np.matrix([0, self.X[1,0], self.X[2,0], self.X[3,0]])
-                self.X = self.X.T
-                """
-
                 self.Xp = self.A*self.X
                 self.Xp = norm_quat(self.Xp[0,0],self.Xp[1,0],self.Xp[2,0],self.Xp[3,0])
                 #self.Xp = np.matrix([-self.Xp[0,0],self.Xp[1,0],self.Xp[2,0],self.Xp[3,0]])
@@ -336,26 +327,21 @@ class kalman_Filter:
                 """
 
                 if (self.Xp[0,0] - self.Z[0,0])>1 or (self.Xp[0,0] - self.Z[0,0])< -1 or (self.Xp[1,0] - self.Z[1,0])>1 or (self.Xp[1,0] - self.Z[1,0])< -1 or (self.Xp[2,0] - self.Z[2,0])>1 or (self.Xp[2,0] - self.Z[2,0])< -1 or (self.Xp[3,0] - self.Z[3,0])>1 or (self.Xp[3,0] - self.Z[3,0])< -1 :
-                        """
-                        if (self.Xp[0,0] - self.Z[0,0])>1 or (self.Xp[0,0] - self.Z[0,0])< -1 :
-                                self.Z = np.matrix([-self.Z[0,0],self.Z[1,0],self.Z[2,0],self.Z[3,0]])
-                                self.Z = self.Z.T
 
-                        else :
-                                self.Z = np.matrix([self.Z[0,0],-self.Z[1,0],-self.Z[2,0],-self.Z[3,0]])
-                                self.Z = self.Z.T
+
+                        self.Z = np.matrix([-self.Z[0,0],-self.Z[1,0],-self.Z[2,0],-self.Z[3,0]])
+                        self.Z = self.Z.T
+
+
                         self.X = self.Xp + self.K*(self.Z - self.H*self.Xp)
                         self.X = norm_quat(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0])
                         self.P = self.Pp - self.K*self.H*self.Pp
-                        """
-                        self.X = self.Xp
 
-                        print("non")
                 else :
                         self.X = self.Xp + self.K*(self.Z - self.H*self.Xp)
                         self.X = norm_quat(self.X[0,0],self.X[1,0],self.X[2,0],self.X[3,0])
                         self.P = self.Pp - self.K*self.H*self.Pp
-                        print("kalman")
+
 
 
                 #self.X = self.Z
