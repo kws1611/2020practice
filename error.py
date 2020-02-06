@@ -44,13 +44,18 @@ def quat_to_matrix(q0,q1,q2,q3):
         return rotation_mat
 
 class error:
-        def motion_cb(self,msg):
+        def motion_cb(self):
+                A = quat_mult(self.q0_init, -self.q1_init,-self.q2_init, self.q3_init,self.motion_w, self.motion_x, self.motion_y, self.motion_z)
+                self.motion_w, self.motion_x, self.motion_y, self.motion_z = A[0,0], A[0,1], A[0,2], A[0,3]
+        
+        def get_motion_cb(self,msg):
                 self.mot_msg = msg
                 self.motion_time = self.mot_msg.header.stamp.secs + self.mot_msg.header.stamp.nsecs*10**(-9)
                 self.motion_x = self.mot_msg.pose.orientation.x
                 self.motion_y = self.mot_msg.pose.orientation.y
                 self.motion_z = self.mot_msg.pose.orientation.z
                 self.motion_w = self.mot_msg.pose.orientation.w
+                self.motion_cb()
 
         def kalman_cb(self,msg):
                 self.kalman_msg = msg
@@ -66,12 +71,29 @@ class error:
                 self.comp_z=self.comp_msg.pose.pose.orientation.z
                 self.comp_w=self.comp_msg.pose.pose.orientation.w
 
+        def initialize(self):
+                q0_sum, q1_sum, q2_sum, q3_sum = 0.0, 0.0, 0.0, 0.0
+                t_prev = time.time()
+                t_now = time.time()
+                num = 0
+                while t_now - t_prev < 2:
+                        q0_sum += self.motion_w
+                        q1_sum += self.motion_x
+                        q2_sum += self.motion_y
+                        q3_sum += self.motion_z
+                        num += 1
+                        t_now = time.time()
+                self.q0_init = q0_sum / num
+                self.q1_init = q1_sum / num
+                self.q2_init = q2_sum / num
+                self.q3_init = q3_sum / num
+
 	def __init__(self):
 		# Subscriber created
                 self.rate = rospy.Rate(78.5)
 		rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
                 #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
-                rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
+                rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.get_motion_cb)
                 self.error_kalman_pub = rospy.Publisher("/kalman_error",PoseStamped, queue_size=1)
                 self.error_pub = rospy.Publisher("/error",error_msg, queue_size=1)
                 #self.error_comp_pub = rospy.Publisher("/comp_error",Quaternion, queue_size=1)
@@ -84,6 +106,8 @@ class error:
                 self.motion_z = 0.0
                 self.motion_w = 0.0
                 self.motion_time = 0.0
+                self.initialize()
+
 
         def kalman_coordinate_cal(self, x , y, z):
                 z_rotated_coordinate = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z) * np.matrix([[x],[y],[z]])
