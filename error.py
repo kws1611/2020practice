@@ -41,14 +41,22 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 
 def quat_to_matrix(q0,q1,q2,q3):
         rotation_mat = np.matrix([[1-2*q2**2 - 2*q3**2, 2*q1*q2 - 2*q0*q3, 2*q1*q3 + 2*q0*q2],[2*q1*q2 + 2*q0*q3, 1-2*q1** -2*q3**2, 2*q2*q3 - q2*q0*q1],[2*q1*q3 - 2*q0*q2, 2*q2*q3 + 2*q3*q1, 1-2*q1**2 - 2*q2**2]])
+
         return rotation_mat
 
+
+
 class error:
+<<<<<<< HEAD
         def motion_cb(self):
                 A = quat_mult(self.q0_init, -self.q1_init,-self.q2_init, self.q3_init,self.motion_w, self.motion_x, self.motion_y, self.motion_z)
                 self.motion_w, self.motion_x, self.motion_y, self.motion_z = A[0,0], A[0,1], A[0,2], A[0,3]
         
         def get_motion_cb(self,msg):
+=======
+
+        def motion_cb(self,msg):
+>>>>>>> 884479a0ef4077bfeea0e9e83b74ca047f05d282
                 self.mot_msg = msg
                 self.motion_time = self.mot_msg.header.stamp.secs + self.mot_msg.header.stamp.nsecs*10**(-9)
                 self.motion_x = self.mot_msg.pose.orientation.x
@@ -59,6 +67,7 @@ class error:
 
         def kalman_cb(self,msg):
                 self.kalman_msg = msg
+
                 self.kal_x=self.kalman_msg.pose.pose.orientation.x
                 self.kal_y=self.kalman_msg.pose.pose.orientation.y
                 self.kal_z=self.kalman_msg.pose.pose.orientation.z
@@ -66,6 +75,7 @@ class error:
 
         def comp_cb(self,msg):
                 self.comp_msg = msg
+
                 self.comp_x=self.comp_msg.pose.pose.orientation.x
                 self.comp_y=self.comp_msg.pose.pose.orientation.y
                 self.comp_z=self.comp_msg.pose.pose.orientation.z
@@ -110,30 +120,31 @@ class error:
 
 
         def kalman_coordinate_cal(self, x , y, z):
-                z_rotated_coordinate = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z) * np.matrix([[x],[y],[z]])
+                z_rotated_coordinate = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z) * np.matrix([[np.cos(np.pi/2), -np.sin(np.pi/2), 0 ],[np.sin(np.pi/2),np.cos(np.pi/2),0],[0,0,1]])*np.matrix([[x],[y],[z]])
+
                 return z_rotated_coordinate
 
         def error_kal_coordinate_cal(self):
                 self.kal_err_x,self.kal_err_y,self.kal_err_z = rotateVectorQuaternion(1, 1, 1, self.kal_w, self.kal_x, self.kal_y, self.kal_z)
                 self.mot_err_x,self.mot_err_y,self.mot_err_z = rotateVectorQuaternion(1, 1, 1, self.motion_w, self.motion_x, self.motion_y, self.motion_z)
+
                 self.kal_err_dist = math.sqrt((self.kal_err_x-self.mot_err_x)**2 + (self.kal_err_y-self.mot_err_y)**2 + (self.kal_err_z - self.mot_err_z)**2)
 
         def error_rpy(self,q0,q1,q2,q3):
                 roll = math.atan2(2*(q0*q1 + q2*q3),(1-2*(q1**2 + q2**2)))
                 if 2*(q0*q2 - q3*q1) > 1 or 2*(q0*q2 - q3*q1) < -1 :
                         pitch = 10
+
                 else :
                         pitch = math.asin(2*(q0*q2 - q3*q1))
                 yaw = math.atan2(2*(q0*q3 + q1*q2),1-2*(q2**2 + q3**2))
+
                 return roll, pitch, yaw
-        
-        def comp_coordinate_cal(self, x , y, z):
-                z_rotated_coordinate = quat_to_matrix(self.comp_w, self.comp_x, self.comp_y, self.comp_z)* np.matrix([[x],[y],[z]])
-                return z_rotated_coordinate
 
         def error_comp_coordinate_cal(self):
                 self.comp_err_x,self.comp_err_y,self.comp_err_z = rotateVectorQuaternion(1, 1, 1, self.comp_w, self.comp_x, self.comp_y, self.comp_z)
                 self.mot_err_x,self.mot_err_y,self.mot_err_z = rotateVectorQuaternion(1, 1, 1, self.motion_w, self.motion_x, self.motion_y, self.motion_z)
+
                 self.comp_err_dist = math.sqrt((self.comp_err_x-self.mot_err_x)**2 + (self.comp_err_y-self.mot_err_y)**2 + (self.comp_err_z - self.mot_err_z)**2)
 
         def error_rpy_cal(self):
@@ -198,10 +209,13 @@ class error:
 
 
 if __name__ == "__main__":
+
 	rospy.init_node("Error_node", anonymous=True)
 	rospy.loginfo("error calculating node initialized")
+
 	try:
 		rospy.loginfo("error calculation start!")
+
 		Error = error()
 		while not rospy.is_shutdown():
 			Error.error_cal()
