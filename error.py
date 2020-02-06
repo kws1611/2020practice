@@ -7,6 +7,7 @@ from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from geometry_msgs.msg import PoseStamped
+from att_est.msg import error_msg
 import smbus
 import numpy as np
 import time
@@ -45,7 +46,6 @@ def quat_to_matrix(q0,q1,q2,q3):
 
 
 
-
 class error:
 
         def motion_cb(self,msg):
@@ -79,6 +79,7 @@ class error:
                 #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
                 rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
                 self.error_kalman_pub = rospy.Publisher("/kalman_error",PoseStamped, queue_size=1)
+                self.error_pub = rospy.Publisher("/error",error_msg, queue_size=1)
                 #self.error_comp_pub = rospy.Publisher("/comp_error",Quaternion, queue_size=1)
                 self.kal_x= 0.0
                 self.kal_y= 0.0
@@ -132,7 +133,7 @@ class error:
                 self.error_comp_yaw = self.comp_yaw - self.mot_yaw
                 """
 	def error_cal(self):
-
+                error_topic=error_msg()
                 error_kal_topic = PoseStamped()
                 #error_camp_topic = Quaternion()
                 #self.error_compt_coordinate_cal()
@@ -153,6 +154,9 @@ class error:
                 self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,self.motion_x,self.motion_y,self.motion_z)
                 #self.comp_error = quat_mult(self.comp_w,self.comp_x,self.comp_y,self.comp_z,self.motion_w,self.motion_x,self.motion_y,self.motion_z)
                 error_kal_topic.header.frame_id = "world"
+                error_topic.x = 1.0
+                error_topic.y = 2.0
+                error_topic.z = 3.0
                 error_kal_topic.pose.position.x = 0
                 error_kal_topic.pose.position.y = 0
                 error_kal_topic.pose.position.z = 0
@@ -171,6 +175,7 @@ class error:
                 print("kalman error roll %.5f pitch %.5f yaw %.5f"  %(self.error_kal_roll,self.error_kal_pitch,self.error_kal_yaw))
                 #print("complementary error roll %.5f pitch %.5f yaw %.5f"  %(self.error_comp_roll,self.error_comp_pitch,self.error_comp_yaw))
                 self.error_kalman_pub.publish(error_kal_topic)
+                self.error_pub.publish(error_topic)
                 #self.error_comp_pub.publish(error_comp_topic)
 		self.rate.sleep()
 
