@@ -41,13 +41,9 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 
 def quat_to_matrix(q0,q1,q2,q3):
         rotation_mat = np.matrix([[1-2*q2**2 - 2*q3**2, 2*q1*q2 - 2*q0*q3, 2*q1*q3 + 2*q0*q2],[2*q1*q2 + 2*q0*q3, 1-2*q1** -2*q3**2, 2*q2*q3 - q2*q0*q1],[2*q1*q3 - 2*q0*q2, 2*q2*q3 + 2*q3*q1, 1-2*q1**2 - 2*q2**2]])
-
         return rotation_mat
 
-
-
 class error:
-
         def motion_cb(self,msg):
                 self.mot_msg = msg
                 self.motion_time = self.mot_msg.header.stamp.secs + self.mot_msg.header.stamp.nsecs*10**(-9)
