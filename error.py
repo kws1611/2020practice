@@ -34,13 +34,17 @@ def norm_quat(a_1, a_2, a_3, a_4):
 	return q
 
 def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
+        q_0 = a_1/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+        q_1 = a_2/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+        q_2 = a_3/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+        q_3 = a_4/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
         vx = ((q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * (x) + 2 * (q1 * q2 - q0 * q3) * y + 2 * (q1 * q3 + q0 * q2) * z)
         vy = (2 * (q1 * q2 + q0 * q3) * x + (q0 * q0 - q1 * q1 + q2 * q2 - q3 * q3) * y + 2 * (q2 * q3 - q0 * q1) * z)
         vz = (2 * (q1 * q3 - q0 * q2) * x + 2 * (q2 * q3 + q0 * q1) * y + (q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) * z)
         return vx, vy, vz
 
 def quat_to_matrix(q0,q1,q2,q3):
-        rotation_mat = np.matrix([[1-2*q2**2 - 2*q3**2, 2*q1*q2 - 2*q0*q3, 2*q1*q3 + 2*q0*q2],[2*q1*q2 + 2*q0*q3, 1-2*q1** -2*q3**2, 2*q2*q3 - q2*q0*q1],[2*q1*q3 - 2*q0*q2, 2*q2*q3 + 2*q3*q1, 1-2*q1**2 - 2*q2**2]])
+        rotation_mat = np.matrix([[1-2*q2**2 - 2*q3**2, 2*q1*q2 - 2*q0*q3, 2*q1*q3 + 2*q0*q2],[2*q1*q2 + 2*q0*q3, 1-2*q1**2 -2*q3**2, 2*q2*q3 - q2*q0*q1],[2*q1*q3 - 2*q0*q2, 2*q2*q3 + 2*q3*q1, 1-2*q1**2 - 2*q2**2]])
 
         return rotation_mat
 
@@ -132,7 +136,7 @@ class error:
                 return kal_turned_coor
 
         def motion_coordinate_cal(self, x , y, z):
-                motion_turned_coor = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z)*np.matrix([[x],[y],[z]])
+                motion_turned_coor = quat_to_matrix(self.motion_w, self.motion_x, self.motion_y, self.kal_z)*np.matrix([[x],[y],[z]])
 
                 return motion_turned_coor
 
@@ -141,9 +145,9 @@ class error:
 
                 return comp_turned_coor
         def kal_coordinate_error_calculation(self):
-                self.kal_x_diff = self.motion_coordinate_cal(1,0,0) - self.kal_coordinate_cal(1,0,0)
-                self.kal_y_diff = self.motion_coordinate_cal(0,1,0) - self.kal_coordinate_cal(0,1,0)
-                self.kal_z_diff = self.motion_coordinate_cal(0,0,1) - self.kal_coordinate_cal(0,0,1)
+                self.kal_x_diff = self.motion_coordinate_cal(1.0,0.0,0.0) - self.kal_coordinate_cal(1.0,0.0,0.0)
+                self.kal_y_diff = self.motion_coordinate_cal(0.0,1.0,0.0) - self.kal_coordinate_cal(0.0,1.0,0.0)
+                self.kal_z_diff = self.motion_coordinate_cal(0.0,0.0,1.0) - self.kal_coordinate_cal(0.0,0.0,1.0)
                 self.kal_x_dist = math.sqrt(self.kal_x_diff[0,0]**2 + self.kal_x_diff[1,0]**2 + self.kal_x_diff[2,0]**2)
                 self.kal_y_dist = math.sqrt(self.kal_y_diff[0,0]**2 + self.kal_y_diff[1,0]**2 + self.kal_y_diff[2,0]**2)
                 self.kal_z_dist = math.sqrt(self.kal_z_diff[0,0]**2 + self.kal_z_diff[1,0]**2 + self.kal_z_diff[2,0]**2)
@@ -200,13 +204,12 @@ class error:
 		# error calculating
                 self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
                 #self.comp_error = quat_mult(self.comp_w,self.comp_x,self.comp_y,self.comp_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
-                #err_kal_topic.x = self.kal_x_diff
-                #err_kal_topic.y =self.kal_y_diff
-                #err_kal_topic.z =self.kal_z_diff
+                err_kal_topic.x = self.kal_x_dist
+                err_kal_topic.y =self.kal_y_dist
+                err_kal_topic.z =self.kal_z_dist
                 err_kal_topic.size =self.kal_diff_size
 
                 err_kal_topic.time = self.kal_time
-                print(err_kal_topic.size)
                 err_kal_topic.mot_time = self.motion_time
 
                 err_kal_topic.roll = self.kal_roll
@@ -239,8 +242,10 @@ class error:
 
                 if self.kal_diff_size != 0.0:
                         print("size")
-                if self.kal_error[0,0] != 0.0:
-                        print("quat")
+                        print("%20.10f" %self.kal_diff_size)
+
+                #if self.kal_error[0,0] != 1.0:
+                #        print("quat")
                 #print("kalman error distance %.5f " %self.kal_err_dist)
                 #print("complementary error distance %.5f " %self.comp_err_dist)
                 #print("kalman error roll %.5f pitch %.5f yaw %.5f"  %(self.error_kal_roll,self.error_kal_pitch,self.error_kal_yaw))
