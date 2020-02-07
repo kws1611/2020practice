@@ -89,7 +89,7 @@ class error:
 	def __init__(self):
 		# Subscriber created
                 self.rate = rospy.Rate(78.5)
-		rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
+		rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.kalman_cb)
                 #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
                 rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
                 self.error_comp_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
@@ -114,6 +114,8 @@ class error:
                 self.q1_init = 0.0
                 self.q2_init = 0.0
                 self.q3_init = 0.0
+                while self.kal_w == 0.0 :
+                        time.sleep(0.1)
                 self.initialize()
 
         def motion_calibration(self):
@@ -178,8 +180,8 @@ class error:
         def error_rpy_cal(self):
                 self.kal_roll, self.kal_pitch , self.kal_yaw = self.error_rpy(self.kal_w, self.kal_x, self.kal_y, self.kal_z)
                 self.mot_roll, self.mot_pitch , self.mot_yaw = self.error_rpy(self.motion_w, self.motion_x, self.motion_y, self.motion_z)
-                #self.comp_roll, self.comp_pitch, self.comp_yaw = self.error_rpy(self.comp_w, self.comp_x, self.comp_y, self.comp_z)
-
+                self.comp_roll, self.comp_pitch, self.comp_yaw = self.error_rpy(self.comp_w, self.comp_x, self.comp_y, self.comp_z)
+                
                 self.error_kal_roll = self.kal_roll - self.mot_roll
                 self.error_kal_pitch = self.kal_pitch - self.mot_pitch
                 self.error_kal_yaw = self.kal_yaw - self.mot_yaw
