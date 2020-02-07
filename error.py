@@ -56,7 +56,8 @@ class error:
                 self.motion_y = self.mot_msg.pose.orientation.y
                 self.motion_z = self.mot_msg.pose.orientation.z
                 self.motion_w = self.mot_msg.pose.orientation.w
-                self.motion_cb()
+                if self.isInit == True:
+                        self.motion_cb()
 
         def kalman_cb(self,msg):
                 self.kalman_msg = msg
@@ -90,6 +91,7 @@ class error:
                 self.q1_init = q1_sum / num
                 self.q2_init = q2_sum / num
                 self.q3_init = q3_sum / num
+                self.isInit = True
 
 	def __init__(self):
 		# Subscriber created
@@ -109,8 +111,8 @@ class error:
                 self.motion_z = 0.0
                 self.motion_w = 0.0
                 self.motion_time = 0.0
+                self.isInit = False
                 self.initialize()
-
 
         def kalman_coordinate_cal(self, x , y, z):
                 z_rotated_coordinate = quat_to_matrix(self.kal_w, self.kal_x, self.kal_y, self.kal_z) * np.matrix([[np.cos(np.pi/2), -np.sin(np.pi/2), 0 ],[np.sin(np.pi/2),np.cos(np.pi/2),0],[0,0,1]])*np.matrix([[x],[y],[z]])
