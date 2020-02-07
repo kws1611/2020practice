@@ -206,6 +206,7 @@ class error:
                 err_kal_topic.size =self.kal_diff_size
 
                 err_kal_topic.time = self.kal_time
+                print(err_kal_topic.size)
                 err_kal_topic.mot_time = self.motion_time
 
                 err_kal_topic.roll = self.kal_roll
