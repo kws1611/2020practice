@@ -45,18 +45,13 @@ def quat_to_matrix(q0,q1,q2,q3):
         return rotation_mat
 
 class error:
-        def motion_cb(self):
-                A = quat_mult(self.q0_init, -self.q1_init,-self.q2_init, -self.q3_init,self.motion_w, self.motion_x, self.motion_y, self.motion_z)
-                self.motion_w, self.motion_x, self.motion_y, self.motion_z = A[0,0], A[0,1], A[0,2], A[0,3]
-
-        def get_motion_cb(self,msg):
+        def motion_cb(self,msg):
                 self.mot_msg = msg
                 self.motion_time = self.mot_msg.header.stamp.secs + self.mot_msg.header.stamp.nsecs*10**(-9)
                 self.motion_x = self.mot_msg.pose.orientation.x
                 self.motion_y = self.mot_msg.pose.orientation.y
                 self.motion_z = self.mot_msg.pose.orientation.z
                 self.motion_w = self.mot_msg.pose.orientation.w
-                #self.motion_cb()
 
         def kalman_cb(self,msg):
                 self.kalman_msg = msg
@@ -96,9 +91,9 @@ class error:
                 self.rate = rospy.Rate(78.5)
 		rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
                 #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
-                rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.get_motion_cb)
-                self.error_comp_pub = rospy.Publisher("/kal_error",error_msg, queue_size=1)
-                self.error_kal_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
+                rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
+                self.error_comp_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
+                self.error_kal_pub = rospy.Publisher("/kal_error",error_msg, queue_size=1)
 
                 self.kal_x= 0.0
                 self.kal_y= 0.0
