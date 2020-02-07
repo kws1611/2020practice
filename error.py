@@ -89,7 +89,7 @@ class error:
 	def __init__(self):
 		# Subscriber created
                 self.rate = rospy.Rate(78.5)
-		rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.kalman_cb)
+		rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
                 #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
                 rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
                 self.error_comp_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
