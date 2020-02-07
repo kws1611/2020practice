@@ -86,7 +86,6 @@ class kalman_Filter:
                 self.mag_z = -(self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_average)/(self.mag_delta_z)
 
         def __init__(self):
-                self.kalman_topic = Quaternion()
                 self.X = np.matrix('1;0;0;0')
                 self.P = np.identity(4)
                 self.dt = float(1.0/78.5)
