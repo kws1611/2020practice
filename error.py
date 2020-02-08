@@ -22,7 +22,19 @@ def quat_mult(a_1, a_2, a_3, a_4, b_1, b_2, b_3, b_4):
 	q_3 = a_1*b_4 + a_2*b_3 - a_3*b_2 + a_4*b_1
 	q = np.matrix([q_0, q_1, q_2, q_3])
 	q = q.T
-	return q
+        return q
+
+def quat_rotation(a_1, a_2, a_3, a_4, b_1, b_2, b_3, b_4):
+
+          q_1 = a_1/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+          q_2= a_2/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+          q_3= a_3/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+          q_4 = a_4/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+          q_front = quat_mult(q_1, q_2, q_3, q_4, b_1, b_2, b_3, b_4)
+          q_front = q_front.T
+          q_behind = quat_mult(q_front[0,0],q_front[0,1],q_front[0,2],q_front[0,3],q_1, -q_2, -q_3, -q_4)
+          q_final = np.matrix([q_behind[1,0],q_behind[2,0],q_behind[3,0]])
+          return q_final.T
 
 def norm_quat(a_1, a_2, a_3, a_4):
 	q_0 = a_1/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
@@ -114,13 +126,18 @@ class error:
                 self.motion_z = 0.0
                 self.motion_w = 0.0
                 self.motion_time = 0.0
+                self.motion_time_prev = 0.0
                 self.q0_init = 0.0
                 self.q1_init = 0.0
                 self.q2_init = 0.0
                 self.q3_init = 0.0
+                self.kal_diff_size_saved = 0.0
+                self.count = 0
                 while self.kal_w == 0.0 :
                         time.sleep(0.1)
                 self.initialize()
+                self.time_duration = time.time() + 20.0
+                self.time = 0.0
 
         def motion_calibration(self):
                 motion = quat_mult(self.motion_w,self.motion_x,self.motion_y,self.motion_z,self.q0_init,-self.q1_init,-self.q2_init,-self.q3_init)
@@ -145,9 +162,14 @@ class error:
 
                 return comp_turned_coor
         def kal_coordinate_error_calculation(self):
+                """
                 self.kal_x_diff = self.motion_coordinate_cal(1.0,0.0,0.0) - self.kal_coordinate_cal(1.0,0.0,0.0)
                 self.kal_y_diff = self.motion_coordinate_cal(0.0,1.0,0.0) - self.kal_coordinate_cal(0.0,1.0,0.0)
                 self.kal_z_diff = self.motion_coordinate_cal(0.0,0.0,1.0) - self.kal_coordinate_cal(0.0,0.0,1.0)
+                """
+                self.kal_x_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,1,0,0) - quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,1,0,0)
+                self.kal_y_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,0,1,0) - quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,0,1,0)
+                self.kal_z_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,0,0,1) - quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,0,0,1)
                 self.kal_x_dist = math.sqrt(self.kal_x_diff[0,0]**2 + self.kal_x_diff[1,0]**2 + self.kal_x_diff[2,0]**2)
                 self.kal_y_dist = math.sqrt(self.kal_y_diff[0,0]**2 + self.kal_y_diff[1,0]**2 + self.kal_y_diff[2,0]**2)
                 self.kal_z_dist = math.sqrt(self.kal_z_diff[0,0]**2 + self.kal_z_diff[1,0]**2 + self.kal_z_diff[2,0]**2)
@@ -195,65 +217,74 @@ class error:
                 self.error_comp_yaw = self.comp_yaw - self.mot_yaw
                 """
 	def error_cal(self):
-                self.motion_calibration()
-                err_kal_topic=error_msg()
-                #error_comp_topic = error_msg()
-                self.error_rpy_cal()
-                self.kal_coordinate_error_calculation()
-                #self.comp_coordinate_error_calculation()
-		# error calculating
-                self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
-                #self.comp_error = quat_mult(self.comp_w,self.comp_x,self.comp_y,self.comp_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
-                err_kal_topic.x = self.kal_x_dist
-                err_kal_topic.y =self.kal_y_dist
-                err_kal_topic.z =self.kal_z_dist
-                err_kal_topic.size =self.kal_diff_size
+                while not rospy.is_shutdown():
+                        self.motion_calibration()
+                        err_kal_topic=error_msg()
+                        #error_comp_topic = error_msg()
+                        self.error_rpy_cal()
+                        self.kal_coordinate_error_calculation()
+                        #self.comp_coordinate_error_calculation()
+                        # error calculating
+                        self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
+                        #self.comp_error = quat_mult(self.comp_w,self.comp_x,self.comp_y,self.comp_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
+                        err_kal_topic.x = self.kal_x_dist
+                        err_kal_topic.y =self.kal_y_dist
+                        err_kal_topic.z =self.kal_z_dist
+                        err_kal_topic.size =self.kal_diff_size
 
-                err_kal_topic.time = self.kal_time
-                err_kal_topic.mot_time = self.motion_time
+                        err_kal_topic.time = self.kal_time
+                        err_kal_topic.mot_time = self.motion_time
 
-                err_kal_topic.roll = self.kal_roll
-                err_kal_topic.pitch = self.kal_pitch
-                err_kal_topic.yaw = self.kal_yaw
+                        err_kal_topic.roll = self.kal_roll
+                        err_kal_topic.pitch = self.kal_pitch
+                        err_kal_topic.yaw = self.kal_yaw
 
-                err_kal_topic.mot_roll = self.mot_roll
-                err_kal_topic.mot_pitch = self.mot_pitch
-                err_kal_topic.mot_yaw = self.mot_yaw
+                        err_kal_topic.mot_roll = self.mot_roll
+                        err_kal_topic.mot_pitch = self.mot_pitch
+                        err_kal_topic.mot_yaw = self.mot_yaw
 
-                err_kal_topic.err_roll = self.error_kal_roll
-                err_kal_topic.err_pitch = self.error_kal_pitch
-                err_kal_topic.err_yaw = self.error_kal_yaw
+                        err_kal_topic.err_roll = self.error_kal_roll
+                        err_kal_topic.err_pitch = self.error_kal_pitch
+                        err_kal_topic.err_yaw = self.error_kal_yaw
 
-                err_kal_topic.err_quat_x = self.kal_error[1,0]
-                err_kal_topic.err_quat_y = self.kal_error[2,0]
-                err_kal_topic.err_quat_z = self.kal_error[3,0]
-                err_kal_topic.err_quat_w = self.kal_error[0,0]
+                        err_kal_topic.err_quat_x = self.kal_error[1,0]
+                        err_kal_topic.err_quat_y = self.kal_error[2,0]
+                        err_kal_topic.err_quat_z = self.kal_error[3,0]
+                        err_kal_topic.err_quat_w = self.kal_error[0,0]
 
-                err_kal_topic.quat_x = self.kal_x
-                err_kal_topic.quat_y = self.kal_y
-                err_kal_topic.quat_z = self.kal_z
-                err_kal_topic.quat_w = self.kal_w
-                """
-		error_comp_topc.x = self.comp_error[1,0]
-		error_comp_topc.y = self.comp_error[2,0]
-		error_comp_topc.z = self.comp_error[3,0]
-		error_comp_topc.w = self.comp_error[0,0]
-                """
+                        err_kal_topic.quat_x = self.kal_x
+                        err_kal_topic.quat_y = self.kal_y
+                        err_kal_topic.quat_z = self.kal_z
+                        err_kal_topic.quat_w = self.kal_w
+                        """
+                        error_comp_topc.x = self.comp_error[1,0]
+                        error_comp_topc.y = self.comp_error[2,0]
+                        error_comp_topc.z = self.comp_error[3,0]
+                        error_comp_topc.w = self.comp_error[0,0]
+                        """
+                        self.kal_diff_size_saved += self.kal_diff_size
+                        self.count += 1
+                        if self.kal_diff_size != 0.0:
+                                print("size")
+                                print("%20.10f" %self.kal_diff_size)
 
-                if self.kal_diff_size != 0.0:
-                        print("size")
-                        print("%20.10f" %self.kal_diff_size)
+                        #if self.kal_error[0,0] != 1.0:
+                        #        print("quat")
+                        #print("kalman error distance %.5f " %self.kal_err_dist)
+                        #print("complementary error distance %.5f " %self.comp_err_dist)
+                        #print("kalman error roll %.5f pitch %.5f yaw %.5f"  %(self.error_kal_roll,self.error_kal_pitch,self.error_kal_yaw))
+                        #print("complementary error roll %.5f pitch %.5f yaw %.5f"  %(self.error_comp_roll,self.error_comp_pitch,self.error_comp_yaw))
+                        self.error_kal_pub.publish(err_kal_topic)
 
-                #if self.kal_error[0,0] != 1.0:
-                #        print("quat")
-                #print("kalman error distance %.5f " %self.kal_err_dist)
-                #print("complementary error distance %.5f " %self.comp_err_dist)
-                #print("kalman error roll %.5f pitch %.5f yaw %.5f"  %(self.error_kal_roll,self.error_kal_pitch,self.error_kal_yaw))
-                #print("complementary error roll %.5f pitch %.5f yaw %.5f"  %(self.error_comp_roll,self.error_comp_pitch,self.error_comp_yaw))
-                self.error_kal_pub.publish(err_kal_topic)
+                        if self.time_duration - self.time < 0:
+                                break
 
-                #self.error_comp_pub.publish(error_comp_topic)
-		self.rate.sleep()
+                        #self.error_comp_pub.publish(error_comp_topic)
+                        self.time = time.time()
+
+        def average_calculation(self):
+                print(self.kal_diff_size_saved / self.count)
+
 
 
 if __name__ == "__main__":
@@ -265,8 +296,10 @@ if __name__ == "__main__":
 		rospy.loginfo("error calculation start!")
 
 		Error = error()
-		while not rospy.is_shutdown():
-			Error.error_cal()
+
+                Error.error_cal()
+                Error.average_calculation()
+
 	except rospy.ROSInterruptException:
 		print "ROS terminated"
 		pass
