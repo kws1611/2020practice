@@ -44,22 +44,22 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 
 class complement_Filter:
 	def __init__(self):
-		self.pub = rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0., 0., 0.
-		self.m_xBias, self.m_yBias, self.m_zBias = -651.379996566, 256.111658654, -267.566586538
-		self.m_xScale, self.m_yScale, self.m_zScale = 411.05001717, 419.652764423, 437.548798077
-		self.Alpha, self.Beta, self.Gyro =0.04, 0.04, 0.5
+		self.m_xBias, self.m_yBias, self.m_zBias = -757.838993819, 201.537980769, -209.708894231
+		self.m_xScale, self.m_yScale, self.m_zScale = 442.593423764, 397.070552885, 432.124639423
+		self.Alpha, self.Beta, self.Gyro =0.04, 0.04, 0.2
 		self.q0, self.q1, self.q2, self.q3 = 1., 0., 0., 0.
-		self.q0_mag, self.q1_mag, self.q2_mag, self.q3_mag = 1., 0., 0., 0.
-		self.a_x, self.a_y, self.a_z = 0., 0., 1.
+		self.q0_acc_mag, self.q1_acc_mag, self.q2_acc_mag, self.q3_acc_mag = 1., 0., 0., 0.
+		self.a_x, self.a_y, self.a_z = 0., 0., 0.
 		self.g_x, self.g_y, self.g_z = 0., 0., 0.
 		self.m_x, self.m_y, self.m_z = 0., 0., 0.
+		self.pub = rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
 		rospy.Subscriber("/imu_raw", Imu, self.get_imu_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.get_mag_data)
 		while self.m_x ** 2 + self.m_y ** 2 + self.m_z ** 2 == 0 :
 			rospy.sleep(0.1)
-		self.q0_mag, self.q1_mag, self.q2_mag, self.q3_mag = self.initialize()
 		self.t_prev = time.time()
+		self.q0_acc_mag, self.q1_acc_mag, self.q2_acc_mag, self.q3_acc_mag = self.initialize()
 		self.rate = rospy.Rate(100)
 
 	def calcDT(self):
@@ -70,71 +70,48 @@ class complement_Filter:
 	def get_imu_data(self, msg):
 		self.a_x = msg.linear_acceleration.x
 		self.a_y = msg.linear_acceleration.y
-		self.a_z = msg.linear_acceleration.z
+		self.a_z = msg.linear_acceleration.z	
 		self.g_x = msg.angular_velocity.x - self.g_xBias
 		self.g_y = msg.angular_velocity.y - self.g_yBias
 		self.g_z = msg.angular_velocity.z - self.g_zBias
 		
 	def get_mag_data(self, msg): 
-		self.m_x = (msg.magnetic_field.y - self.m_yBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_yScale)
+		self.m_x = (msg.magnetic_field.y - self.m_yBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_yScale) 
 		self.m_y = (msg.magnetic_field.x - self.m_xBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_xScale)
-		self.m_z = -(msg.magnetic_field.z - self.m_zBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_zScale)
-
+		self.m_z = -(msg.magnetic_field.z - self.m_zBias) * (self.m_xScale + self.m_yScale + self.m_zScale) / (3 * self.m_zScale) 
+	
 	def initialize(self):
-		q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag = self.mag_predict()
-		q0, q1, q2, q3 = quaternionMultiplication(q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag)
-		return q0, q1, q2, q3
+		q0_sum, q1_sum, q2_sum, q3_sum, count = 0., 0., 0., 0., 0.
+		self.t_now = time.time()
+		while self.t_now - self.t_prev < 1 :
+			q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag = self.mag_predict()
+			q0, q1, q2, q3 = quaternionMultiplication(q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag)
+			q0_sum += q0
+			q1_sum += q1
+			q2_sum += q2
+			q3_sum += q3
+			count += 1
+			self.t_now = time.time()
+		q0 = (self.Alpha + self.Beta)/2 * q0_sum / count + (1 - (self.Alpha + self.Beta)/2)
+		q1 = (self.Alpha + self.Beta)/2 * q1_sum / count
+		q2 = (self.Alpha + self.Beta)/2 * q2_sum / count
+		q3 = (self.Alpha + self.Beta)/2 * q3_sum / count
+		#return q0, q1, q2, q3
+		return q0_sum/count, q1_sum/count, q2_sum/count, q3_sum/count
 
 	def steadyState(self):
 		norm = sqrt(self.g_x ** 2 + self.g_y ** 2 + self.g_z ** 2)
 		axy = sqrt(self.a_x ** 2 + self.a_y ** 2)
-		if norm < 0.01 and axy < 0.1:
+		if norm < 0.002 and axy < 0.01:
 			print(1)
 			return True
 		return False
 
 	def gyroUpdate(self):
-		BiasIs = True
+		BiasIs = False
 		self.g_xBias = self.g_xBias + (self.g_x - self.g_xBias) * self.Gyro
 		self.g_yBias = self.g_yBias + (self.g_y - self.g_yBias) * self.Gyro
 		self.g_zBias = self.g_zBias + (self.g_z - self.g_zBias) * self.Gyro
-	
-
-	def getGyroCali(self, sum_x, sum_y, sum_z, num, goal):
-		sum_x = sum_x + self.g_x
-		sum_y = sum_y + self.g_y
-		sum_z = sum_z + self.g_z
-		num = num + 1
-		BiasIs = False
-		if num == goal:
-			BiasIs = True
-			self.g_xBias = sum_x / goal
-			self.g_yBias = sum_y / goal
-			self.g_zBias = sum_z / goal
-		return sum_x, sum_y, sum_z, num, BiasIs
-
-	def getMagCali(self, max_x, max_y, max_z, min_x, min_y, min_z, num, goal):
-		if self.m_x > max_x:
-			max_x = self.m_x
-		if self.m_x < min_x:
-			min_x = self.m_x
-		if self.m_y > max_y:
-			max_y = self.m_y
-		if self.m_y < min_y:
-			min_y = self.m_y
-		if self.m_z > max_z:
-			max_z = self.m_z
-		if self.m_z < min_z:
-			min_z = self.m_z
-		if num == goal:
-			self.m_xBias = (max_x + min_x) / 2
-			self.m_yBias = (max_y + min_y) / 2
-			self.m_zBias = (max_z + min_z) / 2
-			avg = (max_x - min_x + max_y - min_y + max_z - min_z) / 3
-			self.m_xScale = avg / (max_x - min_x)
-			self.m_yScale = avg / (max_y - min_y)
-			self.m_zScale = avg / (max_z - min_z)
-		return max_x, max_y, max_z, min_x, min_y, min_z
 
 	def getPrediction(self):
 		self.calcDT()
@@ -149,16 +126,17 @@ class complement_Filter:
 	def gainFunction(self, a, b, c):
 		norm = sqrt(a ** 2 + b ** 2 + c ** 2)
 		error = abs(norm - 1)
-		if error < 0.1: 
+		if error < 0.05: 
 			return 1
-		elif error < 0.2:
+		elif error < 0.1:
 			return 1 - 5 * error
 		else:
 			return 0
 
 	def acc_Correction(self):
-		#alpha = self.gainFunction(self.a_x, self.a_y, self.a_z) * self.Alpha
-		alpha = self.Alpha
+		alpha = self.gainFunction(self.a_x, self.a_y, self.a_z) * self.Alpha
+		print(alpha)
+		#alpha = self.Alpha
 		a_x, a_y, a_z = normalization(self.a_x, self.a_y, self.a_z)
 		gx, gy, gz = rotateVectorQuaternion(a_x, a_y, a_z, self.q0_gyro, -self.q1_gyro, -self.q2_gyro, -self.q3_gyro)
 		q0_acc = alpha * sqrt(0.5 * (gx + 1)) + (1 - alpha)
@@ -223,7 +201,7 @@ class complement_Filter:
 			q0_mag, q1_mag, q2_mag, q3_mag = self.mag_Correction()
 			q0, q1, q2, q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, q0_mag, q1_mag, q2_mag, q3_mag)
 			self.q0, self.q1, self.q2, self.q3 = normalizeQuaternion(q0, q1, q2, q3)
-			q0, q1, q2, q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, self.q0_mag, -self.q1_mag, -self.q2_mag, -self.q3_mag)
+			q0, q1, q2, q3 = quaternionMultiplication(self.q0, self.q1, self.q2, self.q3, self.q0_acc_mag, -self.q1_acc_mag, -self.q2_acc_mag, -self.q3_acc_mag )
 			quat_topic = PoseWithCovarianceStamped()
 			quat_topic.header.stamp = rospy.Time.now()
 			quat_topic.header.frame_id = "world"
@@ -241,17 +219,17 @@ class complement_Filter:
 		while not rospy.is_shutdown():
 			q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag = self.mag_predict()
 			q0, q1, q2, q3 = quaternionMultiplication(q0_acc, q1_acc, q2_acc, q3_acc, q0_mag, q1_mag, q2_mag, q3_mag)
-			q0, q1, q2, q3 = quaternionMultiplication(q0, q1, q2, q3, np.cos(pi/4), 0, 0, np.sin(pi/4))
+			q0, q1, q2, q3 = quaternionMultiplication(q0, q1, q2, q3, self.q0_mag, -self.q1_mag, -self.q2_mag, -self.q3_mag)
 			quat_topic = PoseWithCovarianceStamped()
 			quat_topic.header.stamp = rospy.Time.now()
 			quat_topic.header.frame_id = "world"
 			quat_topic.pose.pose.position.x = 0
 			quat_topic.pose.pose.position.y = 0
 			quat_topic.pose.pose.position.z = 0
-			quat_topic.pose.pose.orientation.x = - q1
-			quat_topic.pose.pose.orientation.y = - q2
-			quat_topic.pose.pose.orientation.z = - q3
-			quat_topic.pose.pose.orientation.w = q0
+			quat_topic.pose.pose.orientation.x = - q1_mag
+			quat_topic.pose.pose.orientation.y = - q2_mag
+			quat_topic.pose.pose.orientation.z = - q3_mag
+			quat_topic.pose.pose.orientation.w = q0_mag
 			self.pub.publish(quat_topic)
 			self.rate.sleep()
 
