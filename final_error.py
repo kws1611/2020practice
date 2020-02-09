@@ -8,6 +8,8 @@ from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from geometry_msgs.msg import PoseStamped
 from att_est.msg import error_msg
+from att_est.msg import rpy_plot
+from att_est.msg import quat_plot
 import smbus
 import numpy as np
 import time
@@ -131,8 +133,11 @@ class error:
                 self.count = 0
                 self.kal_size_max = 0.0
                 self.initialize()
-                self.time_duration = time.time() + 15.0
+                self.time_duration = time.time() + 25.0
                 self.time = 0.0
+                self.delay_time = 0.0
+                self.delay_time_final = 0.0
+                self.delay_switch = True
                 rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
 
                 #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
@@ -141,6 +146,8 @@ class error:
                         time.sleep(0.1)
                 self.error_comp_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
                 self.error_kal_pub = rospy.Publisher("/kal_error",error_msg, queue_size=1)
+                self.rpy_plot_pub = rospy.Publisher("/rpy_plot",rpy_plot,queue_size=1)
+                self.quat_plot_pub = rospy.Publisher("/quat_plot",quat_plot,queue_size=1)
 
 
         def motion_calibration(self):
@@ -178,8 +185,6 @@ class error:
                 self.kal_z_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,0,0,1)
                 self.mot_z_diff = quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,0,0,1)
 
-
-
                 self.kal_x_dist = math.sqrt((self.kal_x_diff[0,0] - self.mot_x_diff[0,0])**2 + (self.kal_x_diff[1,0] - self.mot_x_diff[1,0])**2 + (self.kal_x_diff[2,0] - self.mot_x_diff[2,0])**2)
                 self.kal_y_dist = math.sqrt((self.kal_y_diff[0,0] - self.mot_y_diff[0,0])**2 + (self.kal_y_diff[1,0] - self.mot_y_diff[1,0])**2 + (self.kal_y_diff[2,0] - self.mot_y_diff[2,0])**2)
                 self.kal_z_dist = math.sqrt((self.kal_z_diff[0,0] - self.mot_z_diff[0,0])**2 + (self.kal_z_diff[1,0] - self.mot_z_diff[1,0])**2 + (self.kal_z_diff[2,0] - self.mot_z_diff[2,0])**2)
@@ -196,12 +201,14 @@ class error:
 
                 self.kal_diff_size = math.sqrt(self.kal_x_dist**2 + self.kal_y_dist**2 + self.kal_z_dist**2)
                 if self.kal_diff_size > 1.0 :
+                        """
                         print(self.kal_x_diff)
                         print(self.mot_x_diff)
                         print(self.kal_y_diff)
                         print(self.mot_y_diff)
                         print(self.kal_z_diff)
                         print(self.mot_z_diff)
+                        """
 
         def comp_coordinate_error_calculation(self):
                 self.comp_x_diff = self.motion_coordinate_cal(1,0,0) - self.comp_coordinate_cal(1,0,0)
@@ -245,16 +252,24 @@ class error:
                 """
 
         def time_calculation(self):
-                if self.kal_diff_size > 0.06:
-                        self.delay_time = time.time()
-                        self.delay_time_before = True
+                if self.kal_diff_size > 0.1:
+                        if self.delay_switch :
+                                self.delay_switch = False
+                                self.delay_time = time.time()
                 else :
-                        if self.delay_time_before :
+                        if not self.delay_switch :
+
+                                self.delay_time_final = time.time() - self.delay_time
+                                self.delay_switch = True
+                                print("time")
+                                print(self.delay_time_final)
 
 
 	def error_cal(self):
                 while not rospy.is_shutdown():
                         self.motion_calibration()
+                        rpy_plot_topic = rpy_plot()
+                        quat_plot_topic = quat_plot()
                         err_kal_topic=error_msg()
                         #error_comp_topic = error_msg()
                         self.error_rpy_cal()
@@ -263,6 +278,29 @@ class error:
                         # error calculating
                         self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
                         #self.comp_error = quat_mult(self.comp_w,self.comp_x,self.comp_y,self.comp_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
+
+                        rpy_plot_topic.roll = self.kal_roll
+                        rpy_plot_topic.pitch = self.kal_pitch
+                        rpy_plot_topic.yaw = self.kal_yaw
+
+                        """
+                        rpy_plot_topic.roll = self.error_kal_roll
+                        rpy_plot_topic.pitch = self.error_kal_pitch
+                        rpy_plot_topic.yaw = self.error_kal_yaw
+                        """
+
+                        quat_plot_topic.w = self.kal_w
+                        quat_plot_topic.x = self.kal_x
+                        quat_plot_topic.y = self.kal_y
+                        quat_plot_topic.z = self.kal_z
+
+                        """
+                        quat_plot_topic.w = self.kal_error[0,0]
+                        quat_plot_topic.x = self.kal_error[1,0]
+                        quat_plot_topic.y = self.kal_error[2,0]
+                        quat_plot_topic.z = self.kal_error[3,0]
+                        """
+
                         err_kal_topic.x = self.kal_x_dist
                         err_kal_topic.y =self.kal_y_dist
                         err_kal_topic.z =self.kal_z_dist
@@ -303,10 +341,14 @@ class error:
                         self.kal_diff_size_saved += self.kal_diff_size
                         self.count += 1
                         if self.kal_diff_size > 1.0:
+                                """
                                 print("size")
                                 print("%20.10f" %self.kal_diff_size)
                                 print(self.motion_time)
                                 print(self.kal_time)
+                                """
+
+                        self.time_calculation()
 
                         #if self.kal_error[0,0] != 1.0:
                         #        print("quat")
@@ -315,6 +357,8 @@ class error:
                         #print("kalman error roll %.5f pitch %.5f yaw %.5f"  %(self.error_kal_roll,self.error_kal_pitch,self.error_kal_yaw))
                         #print("complementary error roll %.5f pitch %.5f yaw %.5f"  %(self.error_comp_roll,self.error_comp_pitch,self.error_comp_yaw))
                         self.error_kal_pub.publish(err_kal_topic)
+                        self.rpy_plot_pub.publish(rpy_plot_topic)
+                        self.quat_plot_pub.publish(quat_plot_topic)
 
                         if self.time_duration - self.time < 0:
                                 break
