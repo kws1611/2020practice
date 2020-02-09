@@ -47,6 +47,7 @@ class error_calculating:
 		self.q0_cap, self.q1_cap, self.q2_cap, self.q3_cap = 0., 0., 0., 0.
 		self.q0_comp, self.q1_comp, self.q2_comp, self.q3_comp = 0., 0., 0., 0.
 		self.q0_init, self.q1_init, self.q2_init, self.q3_init = 0., 0., 0., 0.
+		self.max_roll, self.max_pitch, self.max_yaw, self.max_q0, self.max_q1, self.max_q2, self.max_q3 = 0., 0., 0., 0., 0., 0., 0.
 		self.isInit = False
 		rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose", PoseStamped, self.get_cap_data)
 		#rospy.Subscriber("pose_covariance", PoseWithCovarianceStamped, self.get_comp_data)
@@ -122,19 +123,33 @@ class error_calculating:
 		q0, q1, q2, q3 = quaternionMultiplication(q0, q1, q2, q3, p0, - p1, - p2, - p3)
 		return q0, q1, q2, q3
 
+	def isMax(self, a, b):
+		if a < b :
+			return b
+		else : 
+			return a
+
 	def calculate_error(self):
 			error_topic = error_msg()
 			error_topic.time = self.time_comp
-			error_topic.mot_time = self.time_cap
+			error_topic.cap_time = self.time_cap
 
 			error_topic.size = self.vectorError(self.q0_cap, self.q1_cap, self.q2_cap, self.q3_cap, self.q0_comp, self.q1_comp, self.q2_comp, self.q3_comp)
 
 			error_topic.roll, error_topic.pitch, error_topic.yaw = quaternionToEuler(self.q0_comp, self.q1_comp, self.q2_comp, self.q3_comp)
-			error_topic.mot_roll, error_topic.mot_pitch, error_topic.mot_yaw = quaternionToEuler(self.q0_cap, self.q1_cap, self.q2_cap, self.q3_cap)
+			error_topic.cap_roll, error_topic.cap_pitch, error_topic.cap_yaw = quaternionToEuler(self.q0_cap, self.q1_cap, self.q2_cap, self.q3_cap)
 			error_topic.err_roll, error_topic.err_pitch, error_topic.err_yaw = self.eulerError(self.q0_cap, self.q1_cap, self.q2_cap, self.q3_cap, self.q0_comp, self.q1_comp, self.q2_comp, self.q3_comp)
 
 			error_topic.quat_w, error_topic.quat_x, error_topic.quat_y, error_topic.quat_z = self.q0_comp, self.q1_comp, self.q2_comp, self.q3_comp
 			error_topic.err_quat_w, error_topic.err_quat_x, error_topic.err_quat_y, error_topic.err_quat_z = self.quaternionError(self.q0_cap, self.q1_cap, self.q2_cap, self.q3_cap, self.q0_comp, self.q1_comp, self.q2_comp, self.q3_comp)
+			error_topic.err_quat_w = 1 - error_topic.err_quat_w
+			self.max_roll = self.isMax(self.max_roll, error_topic.err_roll)
+			self.max_pitch = self.isMax(self.max_pitch, error_topic.err_pitch)
+			self.max_yaw = self.isMax(self.max_yaw, error_topic.err_yaw)
+			self.max_q0 = self.isMax(self.max_q0, error_topic.err_quat_w)
+			self.max_q1 = self.isMax(self.max_q1, error_topic.err_quat_x)
+			self.max_q2 = self.isMax(self.max_q2, error_topic.err_quat_y)
+			self.max_q3 = self.isMax(self.max_q3, error_topic.err_quat_z)
 
 			quat_topic = PoseWithCovarianceStamped()
 			quat_topic.header.stamp = rospy.Time.now()

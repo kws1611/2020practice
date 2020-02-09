@@ -44,7 +44,6 @@ def rotateVectorQuaternion(x, y, z, q0, q1, q2, q3):
 
 class complement_Filter:
 	def __init__(self):
-		self.pub = rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
 		self.g_xBias, self.g_yBias, self.g_zBias = 0., 0., 0.
 		self.m_xBias, self.m_yBias, self.m_zBias = -757.838993819, 201.537980769, -209.708894231
 		self.m_xScale, self.m_yScale, self.m_zScale = 442.593423764, 397.070552885, 432.124639423
@@ -54,6 +53,7 @@ class complement_Filter:
 		self.a_x, self.a_y, self.a_z = 0., 0., 0.
 		self.g_x, self.g_y, self.g_z = 0., 0., 0.
 		self.m_x, self.m_y, self.m_z = 0., 0., 0.
+		self.pub = rospy.Publisher("/quat", PoseWithCovarianceStamped, queue_size = 1)
 		rospy.Subscriber("/imu_raw", Imu, self.get_imu_data)
 		rospy.Subscriber("/mag_raw", MagneticField, self.get_mag_data)
 		while self.m_x ** 2 + self.m_y ** 2 + self.m_z ** 2 == 0 :
@@ -148,7 +148,6 @@ class complement_Filter:
 	def mag_Correction(self):
 		#beta = self.gainFunction(self.m_x, self.m_y, self.m_z) * self.Beta
 		beta = self.Beta
-		print(beta)
 		lx, ly, lz = rotateVectorQuaternion(self.m_x, self.m_y, self.m_z, self.q0, -self.q1, -self.q2, -self.q3)
 		gamma = lx ** 2 + ly ** 2
 		q0_mag = beta * sqrt(gamma + lx * sqrt(gamma))/ sqrt(2 * gamma) + (1 - beta)
