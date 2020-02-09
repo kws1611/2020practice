@@ -48,10 +48,10 @@ class complement_Filter:
 		self.g_xBias, self.g_yBias, self.g_zBias = 0., 0., 0.
 		self.m_xBias, self.m_yBias, self.m_zBias = -651.379996566, 256.111658654, -267.566586538
 		self.m_xScale, self.m_yScale, self.m_zScale = 411.05001717, 419.652764423, 437.548798077
-		self.Alpha, self.Beta, self.Gyro =0.04, 0.04, 0.5
+		self.Alpha, self.Beta, self.Gyro =.04, 0.04, 0.3
 		self.q0, self.q1, self.q2, self.q3 = 1., 0., 0., 0.
 		self.q0_mag, self.q1_mag, self.q2_mag, self.q3_mag = 1., 0., 0., 0.
-		self.a_x, self.a_y, self.a_z = 0., 0., 1.
+		self.a_x, self.a_y, self.a_z = 0., 0., 0.
 		self.g_x, self.g_y, self.g_z = 0., 0., 0.
 		self.m_x, self.m_y, self.m_z = 0., 0., 0.
 		rospy.Subscriber("/imu_raw", Imu, self.get_imu_data)
