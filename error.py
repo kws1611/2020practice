@@ -26,15 +26,15 @@ def quat_mult(a_1, a_2, a_3, a_4, b_1, b_2, b_3, b_4):
 
 def quat_rotation(a_1, a_2, a_3, a_4, b_1, b_2, b_3, b_4):
 
-          q_1 = a_1/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
-          q_2= a_2/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
-          q_3= a_3/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
-          q_4 = a_4/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
-          q_front = quat_mult(q_1, q_2, q_3, q_4, b_1, b_2, b_3, b_4)
-          q_front = q_front.T
-          q_behind = quat_mult(q_front[0,0],q_front[0,1],q_front[0,2],q_front[0,3],q_1, -q_2, -q_3, -q_4)
-          q_final = np.matrix([q_behind[1,0],q_behind[2,0],q_behind[3,0]])
-          return q_final.T
+        q_1 = a_1/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+        q_2= a_2/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+        q_3= a_3/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+        q_4 = a_4/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
+        q_front = quat_mult(q_1, q_2, q_3, q_4, b_1, b_2, b_3, b_4)
+        q_front = q_front.T
+        q_behind = quat_mult(q_front[0,0],q_front[0,1],q_front[0,2],q_front[0,3],q_1, -q_2, -q_3, -q_4)
+        q_final = np.matrix([q_behind[1,0],q_behind[2,0],q_behind[3,0]])
+        return q_final.T
 
 def norm_quat(a_1, a_2, a_3, a_4):
 	q_0 = a_1/math.sqrt(a_1**2 + a_2**2 + a_3**2 + a_4**2)
@@ -64,6 +64,7 @@ class error:
         def motion_cb(self,msg):
                 self.mot_msg = msg
                 self.motion_time = self.mot_msg.header.stamp.secs + self.mot_msg.header.stamp.nsecs*10**(-9)
+
                 self.motion_x = self.mot_msg.pose.orientation.x
                 self.motion_y = self.mot_msg.pose.orientation.y
                 self.motion_z = self.mot_msg.pose.orientation.z
@@ -105,11 +106,6 @@ class error:
 	def __init__(self):
 		# Subscriber created
                 self.rate = rospy.Rate(78.5)
-		rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
-                #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
-                rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
-                self.error_comp_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
-                self.error_kal_pub = rospy.Publisher("/kal_error",error_msg, queue_size=1)
 
                 self.kal_x= 0.0
                 self.kal_y= 0.0
@@ -133,11 +129,19 @@ class error:
                 self.q3_init = 0.0
                 self.kal_diff_size_saved = 0.0
                 self.count = 0
+                self.kal_size_max = 0.0
+                self.initialize()
+                self.time_duration = time.time() + 15.0
+                self.time = 0.0
+                rospy.Subscriber("/pose_covariance", PoseWithCovarianceStamped, self.kalman_cb)
+
+                #rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.comp_cb)
+                rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
                 while self.kal_w == 0.0 :
                         time.sleep(0.1)
-                self.initialize()
-                self.time_duration = time.time() + 20.0
-                self.time = 0.0
+                self.error_comp_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
+                self.error_kal_pub = rospy.Publisher("/kal_error",error_msg, queue_size=1)
+
 
         def motion_calibration(self):
                 motion = quat_mult(self.motion_w,self.motion_x,self.motion_y,self.motion_z,self.q0_init,-self.q1_init,-self.q2_init,-self.q3_init)
@@ -167,14 +171,37 @@ class error:
                 self.kal_y_diff = self.motion_coordinate_cal(0.0,1.0,0.0) - self.kal_coordinate_cal(0.0,1.0,0.0)
                 self.kal_z_diff = self.motion_coordinate_cal(0.0,0.0,1.0) - self.kal_coordinate_cal(0.0,0.0,1.0)
                 """
-                self.kal_x_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,1,0,0) - quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,1,0,0)
-                self.kal_y_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,0,1,0) - quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,0,1,0)
-                self.kal_z_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,0,0,1) - quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,0,0,1)
-                self.kal_x_dist = math.sqrt(self.kal_x_diff[0,0]**2 + self.kal_x_diff[1,0]**2 + self.kal_x_diff[2,0]**2)
-                self.kal_y_dist = math.sqrt(self.kal_y_diff[0,0]**2 + self.kal_y_diff[1,0]**2 + self.kal_y_diff[2,0]**2)
-                self.kal_z_dist = math.sqrt(self.kal_z_diff[0,0]**2 + self.kal_z_diff[1,0]**2 + self.kal_z_diff[2,0]**2)
+                self.kal_x_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,1,0,0)
+                self.mot_x_diff= quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,1,0,0)
+                self.kal_y_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,0,1,0)
+                self.mot_y_diff = quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,0,1,0)
+                self.kal_z_diff = quat_rotation(self.kal_w, self.kal_x, self.kal_y, self.kal_z, 0 ,0,0,1)
+                self.mot_z_diff = quat_rotation(self.motion_w, self.motion_x, self.motion_y, self.kal_z,0,0,0,1)
+
+
+
+                self.kal_x_dist = math.sqrt((self.kal_x_diff[0,0] - self.mot_x_diff[0,0])**2 + (self.kal_x_diff[1,0] - self.mot_x_diff[1,0])**2 + (self.kal_x_diff[2,0] - self.mot_x_diff[2,0])**2)
+                self.kal_y_dist = math.sqrt((self.kal_y_diff[0,0] - self.mot_y_diff[0,0])**2 + (self.kal_y_diff[1,0] - self.mot_y_diff[1,0])**2 + (self.kal_y_diff[2,0] - self.mot_y_diff[2,0])**2)
+                self.kal_z_dist = math.sqrt((self.kal_z_diff[0,0] - self.mot_z_diff[0,0])**2 + (self.kal_z_diff[1,0] - self.mot_z_diff[1,0])**2 + (self.kal_z_diff[2,0] - self.mot_z_diff[2,0])**2)
+
+
+                if self.kal_x_dist > 1.1 :
+                        self.kal_x_dist = math.sqrt((self.kal_x_diff[0,0] + self.mot_x_diff[0,0])**2 + (self.kal_x_diff[1,0] + self.mot_x_diff[1,0])**2 + (self.kal_x_diff[2,0] + self.mot_x_diff[2,0])**2)
+
+                if self.kal_y_dist > 1.1 :
+                        self.kal_y_dist = math.sqrt((self.kal_y_diff[0,0] + self.mot_y_diff[0,0])**2 + (self.kal_y_diff[1,0] + self.mot_y_diff[1,0])**2 + (self.kal_y_diff[2,0] + self.mot_y_diff[2,0])**2)
+
+                if self.kal_z_dist > 1.1 :
+                        self.kal_z_dist = math.sqrt((self.kal_z_diff[0,0] + self.mot_z_diff[0,0])**2 + (self.kal_z_diff[1,0] + self.mot_z_diff[1,0])**2 + (self.kal_z_diff[2,0] + self.mot_z_diff[2,0])**2)
 
                 self.kal_diff_size = math.sqrt(self.kal_x_dist**2 + self.kal_y_dist**2 + self.kal_z_dist**2)
+                if self.kal_diff_size > 1.0 :
+                        print(self.kal_x_diff)
+                        print(self.mot_x_diff)
+                        print(self.kal_y_diff)
+                        print(self.mot_y_diff)
+                        print(self.kal_z_diff)
+                        print(self.mot_z_diff)
 
         def comp_coordinate_error_calculation(self):
                 self.comp_x_diff = self.motion_coordinate_cal(1,0,0) - self.comp_coordinate_cal(1,0,0)
@@ -216,6 +243,15 @@ class error:
                 self.error_comp_pitch = self.comp_pitch - self.mot_pitch
                 self.error_comp_yaw = self.comp_yaw - self.mot_yaw
                 """
+
+        def time_calculation(self):
+                if self.kal_diff_size > 0.06:
+                        self.delay_time = time.time()
+                        self.delay_time_before = True
+                else :
+                        if self.delay_time_before :
+
+
 	def error_cal(self):
                 while not rospy.is_shutdown():
                         self.motion_calibration()
@@ -262,11 +298,15 @@ class error:
                         error_comp_topc.z = self.comp_error[3,0]
                         error_comp_topc.w = self.comp_error[0,0]
                         """
+                        if self.kal_size_max < self.kal_diff_size:
+                             self.kal_size_max = self.kal_diff_size
                         self.kal_diff_size_saved += self.kal_diff_size
                         self.count += 1
-                        if self.kal_diff_size != 0.0:
+                        if self.kal_diff_size > 1.0:
                                 print("size")
                                 print("%20.10f" %self.kal_diff_size)
+                                print(self.motion_time)
+                                print(self.kal_time)
 
                         #if self.kal_error[0,0] != 1.0:
                         #        print("quat")
@@ -284,6 +324,7 @@ class error:
 
         def average_calculation(self):
                 print(self.kal_diff_size_saved / self.count)
+                print(self.kal_size_max)
 
 
 

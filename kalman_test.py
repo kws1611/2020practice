@@ -49,6 +49,8 @@ class kalman_Filter:
 
         def imu_raw_data(self, msg):
                 self.imu_data = msg
+                self.imu_secs = self.imu_data.header.stamp.secs
+                self.imu_nsecs = self.imu_data.header.stamp.nsecs
                 self.acc_x = float(self.imu_data.linear_acceleration.x)*9.81
                 self.acc_y = float(self.imu_data.linear_acceleration.y)*9.81
                 self.acc_z = float(self.imu_data.linear_acceleration.z)*9.81
@@ -266,7 +268,8 @@ class kalman_Filter:
                 # calculating the covariance
                 self.P = self.Pp - self.K*self.H*self.Pp
 
-                pose_topic.header.stamp = rospy.Time.now()
+                pose_topic.header.stamp.secs = self.imu_secs
+                pose_topic.header.stamp.nsecs = self.imu_nsecs
                 pose_topic.header.frame_id = "world"
                 pose_topic.pose.pose.position.x = 0
                 pose_topic.pose.pose.position.y = 0
