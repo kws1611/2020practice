@@ -44,14 +44,14 @@ def quaternionToEuler(q0, q1, q2, q3):
 
 class error_calculating:
 	def __init__(self):
-		rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose", PoseStamped, self.get_cap_data)
-		#rospy.Subscriber("pose_covariance", PoseWithCovarianceStamped, self.get_comp_data)
-		rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.get_comp_data)
 		self.q0_cap, self.q1_cap, self.q2_cap, self.q3_cap = 0., 0., 0., 0.
 		self.q0_comp, self.q1_comp, self.q2_comp, self.q3_comp = 0., 0., 0., 0.
 		self.q0_init, self.q1_init, self.q2_init, self.q3_init = 0., 0., 0., 0.
 		self.isInit = False
-		while self.q0_comp == 0.0 :
+		rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose", PoseStamped, self.get_cap_data)
+		#rospy.Subscriber("pose_covariance", PoseWithCovarianceStamped, self.get_comp_data)
+		rospy.Subscriber("/quat", PoseWithCovarianceStamped, self.get_comp_data)
+		while self.q0_comp == 0.0 or self.q0_cap == 0.0:
 			time.sleep(0.1)
 		self.pub = rospy.Publisher("/cap", PoseWithCovarianceStamped, queue_size = 1)
 		self.error_pub = rospy.Publisher("/error", error_msg, queue_size = 1)
