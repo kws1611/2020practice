@@ -10,6 +10,7 @@ from geometry_msgs.msg import PoseStamped
 from att_est.msg import error_msg
 from att_est.msg import rpy_plot
 from att_est.msg import quat_plot
+from att_est.msg import motion_plot
 import smbus
 import numpy as np
 import time
@@ -133,7 +134,7 @@ class error:
                 self.count = 0
                 self.kal_size_max = 0.0
                 self.initialize()
-                self.time_duration = time.time() + 25.0
+
                 self.time = 0.0
                 self.delay_time = 0.0
                 self.delay_time_final = 0.0
@@ -144,10 +145,12 @@ class error:
                 rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
                 while self.kal_w == 0.0 :
                         time.sleep(0.1)
+                self.time_duration = time.time() + 25.0
                 self.error_comp_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
                 self.error_kal_pub = rospy.Publisher("/kal_error",error_msg, queue_size=1)
                 self.rpy_plot_pub = rospy.Publisher("/rpy_plot",rpy_plot,queue_size=1)
                 self.quat_plot_pub = rospy.Publisher("/quat_plot",quat_plot,queue_size=1)
+                self.motion_plot_pub = rospy.Publisher("/mot_plot",motion_plot,queue_size=1)
 
 
         def motion_calibration(self):
@@ -270,6 +273,7 @@ class error:
                         self.motion_calibration()
                         rpy_plot_topic = rpy_plot()
                         quat_plot_topic = quat_plot()
+                        mot_plot_topic = motion_plot()
                         err_kal_topic=error_msg()
                         #error_comp_topic = error_msg()
                         self.error_rpy_cal()
@@ -293,6 +297,15 @@ class error:
                         quat_plot_topic.x = self.kal_x
                         quat_plot_topic.y = self.kal_y
                         quat_plot_topic.z = self.kal_z
+
+                        mot_plot_topic.w = self.motion_w
+                        mot_plot_topic.x = self.motion_x
+                        mot_plot_topic.y = self.motion_y
+                        mot_plot_topic.z = self.motion_z
+
+                        mot_plot_topic.roll = self.mot_roll
+                        mot_plot_topic.pitch = self.mot_pitch
+                        mot_plot_topic.yaw = self.mot_yaw
 
                         """
                         quat_plot_topic.w = self.kal_error[0,0]
@@ -359,6 +372,7 @@ class error:
                         self.error_kal_pub.publish(err_kal_topic)
                         self.rpy_plot_pub.publish(rpy_plot_topic)
                         self.quat_plot_pub.publish(quat_plot_topic)
+                        self.motion_plot_pub.publish(mot_plot_topic)
 
                         if self.time_duration - self.time < 0:
                                 break
