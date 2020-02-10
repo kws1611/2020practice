@@ -94,7 +94,7 @@ class error:
                 t_prev = time.time()
                 t_now = time.time()
                 num = 0
-                while t_now - t_prev < 2:
+                while t_now - t_prev < 1:
                         q0_sum += self.motion_w
                         q1_sum += self.motion_x
                         q2_sum += self.motion_y
@@ -133,7 +133,7 @@ class error:
                 self.kal_diff_size_saved = 0.0
                 self.count = 0
                 self.kal_size_max = 0.0
-                self.initialize()
+
 
                 self.time = 0.0
                 self.delay_time = 0.0
@@ -146,6 +146,7 @@ class error:
                 while self.kal_w == 0.0 :
                         time.sleep(0.1)
                 self.time_duration = time.time() + 25.0
+                self.initialize()
                 self.error_comp_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
                 self.error_kal_pub = rospy.Publisher("/kal_error",error_msg, queue_size=1)
                 self.rpy_plot_pub = rospy.Publisher("/rpy_plot",rpy_plot,queue_size=1)
@@ -270,7 +271,7 @@ class error:
 
 	def error_cal(self):
                 while not rospy.is_shutdown():
-                        self.motion_calibration()
+                        #self.motion_calibration()
                         rpy_plot_topic = rpy_plot()
                         quat_plot_topic = quat_plot()
                         mot_plot_topic = motion_plot()
