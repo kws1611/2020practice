@@ -133,6 +133,23 @@ class error:
                 self.kal_diff_size_saved = 0.0
                 self.count = 0
                 self.kal_size_max = 0.0
+                self.roll_error_max = 0.0
+                self.pitch_error_max = 0.0
+                self.yaw_error_max = 0.0
+                self.roll_error_avg = 0.0
+                self.pitch_error_avg = 0.0
+                self.yaw_error_avg = 0.0
+                self.kal_error_x_average = 0.0
+                self.kal_error_x_max = 0.0
+                self.kal_error_y_average = 0.0
+                self.kal_error_y_max = 0.0
+                self.kal_error_z_average = 0.0
+                self.kal_error_z_max = 0.0
+                self.kal_error_w = 0.0
+                self.kal_error_x = 0.0
+                self.kal_error_y = 0.0
+                self.kal_error_z = 0.0
+                self.rate = rospy.Rate(78.5)
 
 
                 self.time = 0.0
@@ -145,7 +162,7 @@ class error:
                 rospy.Subscriber("/vrpn_client_node/quad_imu_2/pose",PoseStamped,self.motion_cb)
                 while self.kal_w == 0.0 :
                         time.sleep(0.1)
-                self.time_duration = time.time() + 25.0
+                self.time_duration = time.time() + 17.0
                 self.initialize()
                 self.error_comp_pub = rospy.Publisher("/comp_error",error_msg, queue_size=1)
                 self.error_kal_pub = rospy.Publisher("/kal_error",error_msg, queue_size=1)
@@ -284,6 +301,14 @@ class error:
                         self.kal_error = quat_mult(self.kal_w,self.kal_x,self.kal_y,self.kal_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
                         #self.comp_error = quat_mult(self.comp_w,self.comp_x,self.comp_y,self.comp_z,self.motion_w,-self.motion_x,-self.motion_y,-self.motion_z)
 
+                        self.kal_error_w = self.kal_error[0,0]
+                        self.kal_error_x = self.kal_error[1,0]
+                        self.kal_error_y = self.kal_error[2,0]
+                        self.kal_error_z = self.kal_error[3,0]
+
+
+
+
                         rpy_plot_topic.roll = self.kal_roll
                         rpy_plot_topic.pitch = self.kal_pitch
                         rpy_plot_topic.yaw = self.kal_yaw
@@ -294,10 +319,10 @@ class error:
                         rpy_plot_topic.yaw = self.error_kal_yaw
                         """
 
-                        quat_plot_topic.w = self.kal_w
-                        quat_plot_topic.x = self.kal_x
-                        quat_plot_topic.y = self.kal_y
-                        quat_plot_topic.z = self.kal_z
+                        quat_plot_topic.w = self.kal_error_w
+                        quat_plot_topic.x = self.kal_error_x
+                        quat_plot_topic.y = self.kal_error_y
+                        quat_plot_topic.z = self.kal_error_z
 
                         mot_plot_topic.w = self.motion_w
                         mot_plot_topic.x = self.motion_x
@@ -353,6 +378,9 @@ class error:
                         if self.kal_size_max < self.kal_diff_size:
                              self.kal_size_max = self.kal_diff_size
                         self.kal_diff_size_saved += self.kal_diff_size
+                        self.roll_error_avg += self.error_kal_roll
+                        self.pitch_error_avg += self.error_kal_pitch
+                        self.yaw_error_avg += self.error_kal_yaw
                         self.count += 1
                         if self.kal_diff_size > 1.0:
                                 """
@@ -380,10 +408,57 @@ class error:
 
                         #self.error_comp_pub.publish(error_comp_topic)
                         self.time = time.time()
+                        if self.roll_error_max < self.error_kal_roll:
+                                self.roll_error_max = self.error_kal_roll
+
+                        if self.pitch_error_max < self.error_kal_pitch:
+                                self.pitch_error_max = self.error_kal_pitch
+
+                        if self.yaw_error_max < self.error_kal_yaw:
+                                self.yaw_error_max = self.error_kal_yaw
+
+                        if abs(self.kal_error_x_max) < abs(self.kal_error_x):
+                                self.kal_error_x_max = self.kal_error_x
+                        self.kal_error_x_average += self.kal_error_x
+                        if abs(self.kal_error_y_max) < abs(self.kal_error_y):
+                                self.kal_error_y_max = self.kal_error_y
+                        self.kal_error_y_average += self.kal_error_y
+                        if abs(self.kal_error_z_max) < abs(self.kal_error_z):
+                                self.kal_error_z_max = self.kal_error_z
+                        self.kal_error_z_average += self.kal_error_z
+
+                        #self.rate.sleep()
 
         def average_calculation(self):
+                """
+                print("average size error")
                 print(self.kal_diff_size_saved / self.count)
+                print("max size error")
                 print(self.kal_size_max)
+
+                print("roll max")
+                print(self.roll_error_max)
+                print("average")
+                print(self.roll_error_avg/self.count)
+                print("pitch max")
+                print(self.pitch_error_max)
+                print("average")
+                print(self.pitch_error_avg/self.count)
+                print("yaw max")
+                print(self.yaw_error_max)
+                print("average")
+                print(self.yaw_error_avg/self.count)
+                """
+                print("x")
+                print(self.kal_error_x_max)
+                print(self.kal_error_x_average/self.count)
+                print("y")
+                print(self.kal_error_y_max)
+                print(self.kal_error_y_average/self.count)
+                print("z")
+                print(self.kal_error_z_max)
+                print(self.kal_error_z_average/self.count)
+
 
 
 
