@@ -83,10 +83,15 @@ class kalman_Filter:
                 self.mag_average = (self.mag_delta_x + self.mag_delta_y + self.mag_delta_z)/3
 
                 #magnetometer sensor's axis is twisted so we have to change axis
+
                 self.mag_x = (self.mag_data.magnetic_field.y -self.mag_bias_y) * (self.mag_average)/(self.mag_delta_y)
                 self.mag_y = (self.mag_data.magnetic_field.x -self.mag_bias_x) * (self.mag_average)/(self.mag_delta_x)
                 self.mag_z = -(self.mag_data.magnetic_field.z -self.mag_bias_z) * (self.mag_average)/(self.mag_delta_z)
-
+                """
+                self.mag_x = (self.mag_data.magnetic_field.y -self.mag_bias_y)
+                self.mag_y = (self.mag_data.magnetic_field.x -self.mag_bias_x)
+                self.mag_z = -(self.mag_data.magnetic_field.z -self.mag_bias_z)
+                """
         def __init__(self):
                 self.X = np.matrix('1;0;0;0')
                 self.P = np.identity(4)
@@ -236,7 +241,7 @@ class kalman_Filter:
 
         def kalman(self):
                 pose_topic = PoseWithCovarianceStamped()
-                self.gyro_bias_update()
+                #self.gyro_bias_update()
                 self.get_acc_quat()
                 self.get_mag_quat()
 
@@ -268,6 +273,8 @@ class kalman_Filter:
                 # calculating the covariance
                 self.P = self.Pp - self.K*self.H*self.Pp
 
+
+                #self.X = self.Z
                 pose_topic.header.stamp.secs = self.imu_secs
                 pose_topic.header.stamp.nsecs = self.imu_nsecs
                 pose_topic.header.frame_id = "world"
