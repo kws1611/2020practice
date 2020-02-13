@@ -61,7 +61,7 @@ class kalman_Filter:
 
         def mag_raw_data(self, msg):
                 self.mag_data = msg
-
+                """
                 # bias when doing calibration at the motion capture lab
                 self.mag_bias_x = -651.379996566
                 self.mag_bias_y = 256.111658654
@@ -72,14 +72,14 @@ class kalman_Filter:
                 self.mag_delta_z = 437.548798077
                 """
 
-                self.mag_bias_x = -568.578554258
-                self.mag_bias_y = 258.323016827
-                self.mag_bias_z = -302.82361778
+                self.mag_bias_x = -117.11354739
+                self.mag_bias_y = 506.397836538
+                self.mag_bias_z = 653.636358173
 
-                self.mag_delta_x = 420.907331731
-                self.mag_delta_y = 450.703305288
-                self.mag_delta_z = 458.34140625
-                """
+                self.mag_delta_x = 1599.84215316
+                self.mag_delta_y = 2077.56346154
+                self.mag_delta_z = 1765.5636154
+
                 self.mag_average = (self.mag_delta_x + self.mag_delta_y + self.mag_delta_z)/3
 
                 #magnetometer sensor's axis is twisted so we have to change axis
