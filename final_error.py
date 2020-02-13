@@ -145,6 +145,7 @@ class error:
                 self.kal_error_y_max = 0.0
                 self.kal_error_z_average = 0.0
                 self.kal_error_z_max = 0.0
+                self.kal_error_w_average = 0.0
                 self.kal_error_w = 0.0
                 self.kal_error_x = 0.0
                 self.kal_error_y = 0.0
@@ -378,9 +379,9 @@ class error:
                         if self.kal_size_max < self.kal_diff_size:
                              self.kal_size_max = self.kal_diff_size
                         self.kal_diff_size_saved += self.kal_diff_size
-                        self.roll_error_avg += self.error_kal_roll
-                        self.pitch_error_avg += self.error_kal_pitch
-                        self.yaw_error_avg += self.error_kal_yaw
+                        self.roll_error_avg += self.error_kal_roll**2
+                        self.pitch_error_avg += self.error_kal_pitch**2
+                        self.yaw_error_avg += self.error_kal_yaw**2
                         self.count += 1
                         if self.kal_diff_size > 1.0:
                                 """
@@ -419,13 +420,14 @@ class error:
 
                         if abs(self.kal_error_x_max) < abs(self.kal_error_x):
                                 self.kal_error_x_max = self.kal_error_x
-                        self.kal_error_x_average += self.kal_error_x
+                        self.kal_error_x_average += self.kal_error_x**2
                         if abs(self.kal_error_y_max) < abs(self.kal_error_y):
                                 self.kal_error_y_max = self.kal_error_y
-                        self.kal_error_y_average += self.kal_error_y
+                        self.kal_error_y_average += self.kal_error_y**2
                         if abs(self.kal_error_z_max) < abs(self.kal_error_z):
                                 self.kal_error_z_max = self.kal_error_z
-                        self.kal_error_z_average += self.kal_error_z
+                        self.kal_error_z_average += self.kal_error_z**2
+                        self.kal_error_w_average += self.kal_error_w**2
 
                         #self.rate.sleep()
 
@@ -449,15 +451,22 @@ class error:
                 print("average")
                 print(self.yaw_error_avg/self.count)
                 """
+                print("rpy")
+                print(math.sqrt(self.roll_error_avg/self.count))
+                print(math.sqrt(self.pitch_error_avg/self.count))
+                print(math.sqrt(self.yaw_error_avg/self.count))
+
                 print("x")
-                print(self.kal_error_x_max)
-                print(self.kal_error_x_average/self.count)
+                #print(self.kal_error_x_max)
+                print(math.sqrt(self.kal_error_x_average/self.count))
                 print("y")
-                print(self.kal_error_y_max)
-                print(self.kal_error_y_average/self.count)
+                #print(self.kal_error_y_max)
+                print(math.sqrt(self.kal_error_y_average/self.count))
                 print("z")
-                print(self.kal_error_z_max)
-                print(self.kal_error_z_average/self.count)
+                #print(self.kal_error_z_max)
+                print(math.sqrt(self.kal_error_z_average/self.count))
+                print("w")
+                print(1.0-math.sqrt(self.kal_error_w_average/self.count))
 
 
 
