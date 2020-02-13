@@ -379,9 +379,9 @@ class error:
                         if self.kal_size_max < self.kal_diff_size:
                              self.kal_size_max = self.kal_diff_size
                         self.kal_diff_size_saved += self.kal_diff_size
-                        self.roll_error_avg += self.error_kal_roll**2
-                        self.pitch_error_avg += self.error_kal_pitch**2
-                        self.yaw_error_avg += self.error_kal_yaw**2
+                        self.roll_error_avg += self.kal_roll**2
+                        self.pitch_error_avg += self.kal_pitch**2
+                        self.yaw_error_avg += self.kal_yaw**2
                         self.count += 1
                         if self.kal_diff_size > 1.0:
                                 """
@@ -420,14 +420,14 @@ class error:
 
                         if abs(self.kal_error_x_max) < abs(self.kal_error_x):
                                 self.kal_error_x_max = self.kal_error_x
-                        self.kal_error_x_average += self.kal_error_x**2
+                        self.kal_error_x_average += self.kal_x**2
                         if abs(self.kal_error_y_max) < abs(self.kal_error_y):
                                 self.kal_error_y_max = self.kal_error_y
-                        self.kal_error_y_average += self.kal_error_y**2
+                        self.kal_error_y_average += self.kal_y**2
                         if abs(self.kal_error_z_max) < abs(self.kal_error_z):
                                 self.kal_error_z_max = self.kal_error_z
-                        self.kal_error_z_average += self.kal_error_z**2
-                        self.kal_error_w_average += self.kal_error_w**2
+                        self.kal_error_z_average += self.kal_z**2
+                        self.kal_error_w_average += self.kal_w**2
 
                         #self.rate.sleep()
 
