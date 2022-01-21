@@ -5,7 +5,6 @@ from sensor_msgs.msg import MagneticField
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import PoseWithCovarianceStamped
-import smbus
 import numpy as np
 import time
 import math
@@ -99,11 +98,11 @@ class kalman_Filter:
                                         self.mag_z_l = self.mag_z
                                 self.cal_count += 1
 
-                        print("mag_x")
+                        print("mag_x_bias")
                         print((self.mag_x_h + self.mag_x_l)/2)
-                        print("mag_y")
+                        print("mag_y_bias")
                         print((self.mag_y_h + self.mag_y_l)/2)
-                        print("mag_z")
+                        print("mag_z_bias")
                         print((self.mag_z_h + self.mag_z_l)/2)
 
                         print("mag_delta_x")
@@ -112,6 +111,12 @@ class kalman_Filter:
                         print((self.mag_y_h - self.mag_y_l)/2)
                         print("mag_delta_z")
                         print((self.mag_z_h - self.mag_z_l)/2)
+                        print("mag_x_h")
+                        print(self.mag_x_h, self.mag_x_l)
+                        print("mag_y_l")
+                        print(self.mag_y_h, self.mag_y_l)
+                        print("mag_z_l")
+                        print(self.mag_z_h ,self.mag_z_l)
 
                         print("%f   %f    %f      %f      %f      %f" %(self.mag_x_l,self.mag_x_h,self.mag_y_l,self.mag_y_h,self.mag_z_l, self.mag_z_h))
 if __name__ == "__main__":
